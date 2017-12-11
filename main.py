@@ -12,9 +12,6 @@ from urllib.parse import quote
 app = Flask(__name__)
 bot = LineBotApi(environ['ChannelAccessToken'])
 handler = WebhookHandler(environ['ChannelSecret'])
-
-database = DataBase()
-net = Net()
 editors = (environ['LineID1'], environ['LineID2'], environ['LineID3'], environ['LineID4'])
 
 class DataBase(object):
@@ -287,6 +284,10 @@ class Net(object):
         if title in self.TC:
             uri += "%28TC%29"
         return uri
+
+
+database = DataBase()
+net = Net()
 
 @app.route("/", methods=['POST'])
 def callback():
