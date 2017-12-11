@@ -9,6 +9,14 @@ from pandas import read_html
 from pymongo import MongoClient
 from urllib.parse import quote
 
+app = Flask(__name__)
+bot = LineBotApi(environ['ChannelAccessToken'])
+handler = WebhookHandler(environ['ChannelSecret'])
+
+database = DataBase()
+net = Net()
+editors = (environ['LineID1'], environ['LineID2'], environ['LineID3'], environ['LineID4'])
+
 class DataBase(object):
     """Handles MongoDB requests
 
@@ -18,6 +26,7 @@ class DataBase(object):
         uri: Mongodb connect uri
         db: The name of the database
         collection: Defualt collection of database
+        time_table: The table contains the upgrade time of all progrsm and node 
 
     """
     def __init__(self):
@@ -60,8 +69,7 @@ class DataBase(object):
                 if self.levenshtein_distance(name, documents['gamename']):
                     names.append(documents['gamename'] + ' --> ' + documents['linename'])
 
-        names = list(set(names)) # Remove the duplicates.
-
+        names = set(names) # Remove the duplicates.
         return '\n'.join(names)
 
     def levenshtein_distance(self, source, target, reversed = False):
@@ -131,7 +139,7 @@ class DataBase(object):
         Raises:
             KeyError: When the name,level string doesn't exist.
         """
-        index_name = '{}{}'.format(name, level)
+        index_name = name + str(level)
         collection = self.db['pictures']
         data = collection.find_one({'Name': index_name})
 
@@ -158,7 +166,6 @@ class DataBase(object):
             KeyError: When the rule doesn't exist.
         """
         collection = self.db['rules']
-
         try:
             return collection.find_one({'_id': number})['rule']
         except KeyError:
@@ -200,11 +207,24 @@ class DataBase(object):
 
         return page in document['pages']
     def get_time(self, title, number, level1, level2):
+        """Get the upgrade time from level1 to level2.
+
+        Args:
+            title: A program or node name.
+            number: The amount of the node that need to upgrade.
+            level1: The level of the node now.
+            level2: The level the node will be after upgrade
+
+        Returns:
+            How much time it take (minutes).
+        """
         total_time = numpy.array([0, 0, 0])
+        
         for level in range(level1+1, level2+1):
-            doc = numpy.array(self.time_table[title][str(level)]) * number
-            total_time += doc
+            total_time += numpy.array(self.time_table[title][str(level)]) * number
+
         minute = total_time[0] * 1440 + total_time[1] * 60 + total_time[2]
+
         return minute
 
 
@@ -263,17 +283,10 @@ class Net(object):
             The uri of the page.
         """
         uri = self.uri + quote(title, safe='')
+
         if title in self.TC:
             uri += "%28TC%29"
         return uri
-
-
-app = Flask(__name__)
-bot = LineBotApi(environ['ChannelAccessToken'])
-handler = WebhookHandler(environ['ChannelSecret'])
-database = DataBase()
-net = Net()
-editors = (environ['LineID1'], environ['LineID2'], environ['LineID3'], environ['LineID4'])
 
 @app.route("/", methods=['POST'])
 def callback():
@@ -295,19 +308,14 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     """Main hadler of the message event."""
-
-    
-
     if event.source.type == "group" and event.source.group_id == environ['TalkID']:
         bot.push_message(environ['GroupMain'], TextSendMessage(event.message.text))
 
     if event.message.text == "我的ID" and event.source.type == "user":
         bot.reply_message(event.reply_token, TextSendMessage(event.source.user_id)) 
-
-    if event.message.text == "群組ID" and event.source.type == "group":
-        bot.reply_message(event.reply_token, TextSendMessage(event.source.group_id))
     
     text_msg = event.message.text.split()
+
     if text_msg[0] == '貓':
         text_msg[1] = database.correct(text_msg[1])
         reply_msg = ''
@@ -347,11 +355,7 @@ def handle_message(event):
                 total_time = 0
                 tofind = event.message.text.split('\n')
                 del tofind[0]
-                try:
-                    threads = int(tofind[0][0])
-                    del tofind[0]
-                except ValueError:
-                    threads = 1
+
                 for data in tofind:
                     data = data.split()
                     if not database.is_wiki_page(data[0]): continue
@@ -361,31 +365,33 @@ def handle_message(event):
                         continue
                     data[0] = database.correct(data[0])
                     total_time += database.get_time(data[0], data[1], data[2], data[3])
+
                 hour = total_time // 60
                 minute = total_time % 60
                 day = hour // 24
                 hour = hour % 24
-                
                 reply_msg = '總共需要：{}天{}小時{}分鐘'.format(day, hour, minute)
     
         # The reply_msg maybe picture so we need to check the instance
         if isinstance(reply_msg, str): 
             reply_msg = TextSendMessage(reply_msg)
+
         bot.reply_message(event.reply_token, reply_msg)
 
     elif event.message.text[0] == '貓' and event.source.user_id in editors:
         text_msg = event.message.text.split(event.message.text[1])
         text_msg = [x for x in text_msg if x]
         msg_length = len(text_msg)
-
         if msg_length == 3:
             if text_msg[2] == '退群':
                 database.delete_name(text_msg[1])
                 bot.reply_message(event.reply_token, TextSendMessage('成功刪除一筆資料'))
+
         elif msg_length == 4:
             if text_msg[1] == '新增資料':
                 database.add_name(text_msg[2], text_msg[3])
                 bot.reply_message(event.reply_token, TextSendMessage('成功新增一筆資料'))
+
             elif text_msg[1] == '更新資料':
                 database.update_name(text_msg[2], text_msg[3])
                 bot.reply_message(event.reply_token, TextSendMessage('成功更新一筆資料'))
