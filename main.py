@@ -216,10 +216,11 @@ class DataBase(object):
             How much time it take (minutes).
         """
         total_time = numpy.array([0, 0, 0])
-        
-        for level in range(level1+1, level2+1):
-            total_time += numpy.array(self.time_table[title][str(level)]) * number
-
+        try:
+            for level in range(level1+1, level2+1):
+                total_time += numpy.array(self.time_table[title][str(level)]) * number
+        except KeyError:
+            return 0
         minute = total_time[0] * 1440 + total_time[1] * 60 + total_time[2]
 
         return minute
