@@ -258,7 +258,7 @@ class DataBase(object):
         Returns:
             How many experiences will gain.
         """
-        total_exp = self.experience[level2] - self.experience[level1+1]
+        total_exp = self.experience[str(level2)] - self.experience[str(level1+1)]
         total_exp *= number
         return total_exp
 
