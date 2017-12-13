@@ -28,6 +28,8 @@ class DataBase(object):
         collection: Defualt collection of database.
         time_table: The table contains the upgrade time
                     of all progrsm and node.
+        experience: The table contains the upgrade experience
+                    of all progrsm and node.
 
     """
     def __init__(self):
@@ -39,6 +41,7 @@ class DataBase(object):
         self.db = MongoClient(self.uri)['meow']
         self.collection = self.db['name']
         self.time_table = self.db['time'].find_one({'_id': 0})
+        self.experience = self.db['time'].find_one({'_id': 1})
 
     def add_name(self, gamename, linename):
         self.collection.insert_one({"gamename": gamename,
@@ -243,6 +246,22 @@ class DataBase(object):
 
         return minute
 
+    def get_exp(self, title, number, level1, level2):
+        """Get the upgrade experience from level1 to level2.
+
+        Args:
+            title: A program or node name.
+            number: The amount of the node that need to upgrade.
+            level1: The level of the node now.
+            level2: The level the node will be after upgrade
+
+        Returns:
+            How many experiences will gain.
+        """
+        total_exp = self.experience[level2] - self.experience[level1+1]
+        total_exp *= number
+        return total_exp
+
 
 class Net(object):
     """Handles the web crawler
@@ -394,6 +413,10 @@ def handle_message(event):
                     try:
                         for i in range(1, 4):
                             data[i] = int(data[i])
+                            if data[i] > 21:
+                                data[i] = 21
+                            if data[i] < 0:
+                                data[i] = 0
                     except ValueError:
                         continue
                     data[0] = database.correct(data[0])
@@ -405,6 +428,28 @@ def handle_message(event):
                 day = hour // 24
                 hour = hour % 24
                 reply_msg = '總共需要：{}天{}小時{}分鐘'.format(day, hour, minute)
+            elif event.message.text[:6] == '貓 計算經驗':
+                total_exp = 0
+                tofind = event.message.text.split('\n')
+                del tofind[0]
+
+                for data in tofind:
+                    data = data.split()
+                    if not database.is_wiki_page(data[0]):
+                        continue
+                    try:
+                        for i in range(1, 4):
+                            data[i] = int(data[i])
+                            if data[i] > 21:
+                                data[i] = 21
+                            elif data[i] < 0:
+                                data[i] = 0
+                    except ValueError:
+                        continue
+                    data[0] = database.correct(data[0])
+                    total_exp += database.get_exp(data[0], data[1],
+                                                  data[2], data[3])
+                reply_msg = '總共獲得：{} 經驗'.format(total_exp)
 
         # The reply_msg maybe picture so we need to check the instance
         if isinstance(reply_msg, str):
