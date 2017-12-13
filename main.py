@@ -453,11 +453,12 @@ def handle_message(event):
                                                   data[2], data[3])
                 reply_msg = '總共獲得：{} 經驗'.format(total_exp)
 
-        # The reply_msg maybe picture so we need to check the instance
-        if isinstance(reply_msg, str):
-            reply_msg = TextSendMessage(reply_msg)
+        if reply_msg:
+            # The reply_msg maybe picture so we need to check the instance
+            if isinstance(reply_msg, str):
+                reply_msg = TextSendMessage(reply_msg)
 
-        bot.reply_message(event.reply_token, reply_msg)
+            bot.reply_message(event.reply_token, reply_msg)
 
     elif event.message.text[0] == '貓' and event.source.user_id in editors:
         text_msg = event.message.text.split(event.message.text[1])
