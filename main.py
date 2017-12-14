@@ -40,8 +40,9 @@ class DataBase(object):
                     self.UserID, self.UserPassword)
         self.db = MongoClient(self.uri)['meow']
         self.collection = self.db['name']
-        self.time_table = self.db['time'].find_one({'_id': 0})
-        self.experience = self.db['time'].find_one({'_id': 1})
+        time = self.db['time'].find_one({'_id': 0})
+        experience = self.db['time'].find_one({'_id': 1})
+        self.data_table = (time, experience)
 
     def add_name(self, gamename, linename):
         self.collection.insert_one({"gamename": gamename,
@@ -223,7 +224,7 @@ class DataBase(object):
 
         return page in document['pages']
 
-    def get_time(self, title, number, level1, level2):
+    def get_time_exp(self, title, number, level1, level2, n):
         """Get the upgrade time from level1 to level2.
 
         Args:
@@ -235,31 +236,13 @@ class DataBase(object):
         Returns:
             How much time it take (minutes).
         """
+        title = self.correct(title)
         try:
-            total_time = self.time_table[str(level2)] - self.time_table[str(level1+1)]
+            total_time = self.data_table[n][title][str(level2)] - self.data_table[n][title][str(level1+1)]
         except KeyError:
             return 0 
         total_time *= number
         return total_time
-
-    def get_exp(self, title, number, level1, level2):
-        """Get the upgrade experience from level1 to level2.
-
-        Args:
-            title: A program or node name.
-            number: The amount of the node that need to upgrade.
-            level1: The level of the node now.
-            level2: The level the node will be after upgrade
-
-        Returns:
-            How many experiences will gain.
-        """
-        try:
-            total_exp = self.experience[str(level2)] - self.experience[str(level1+1)]
-        except KeyError:
-            return 0
-        total_exp *= number
-        return total_exp
 
 
 class Net(object):
@@ -414,8 +397,8 @@ def handle_message(event):
                             data[i] = int(data[i])
                     except ValueError:
                         continue
-                    total_time += database.get_time(word, data[1],
-                                                    data[2], data[3])
+                    total_time += database.get_time_exp(word, data[1],
+                                                    data[2], data[3], 0)
                 hour, minute = divmod(total_time, 60)
                 day, hour = divmod(hour, 24)
                 reply_msg = '總共需要：{}天{}小時{}分鐘'.format(day, hour, minute)
@@ -433,8 +416,8 @@ def handle_message(event):
                             data[i] = int(data[i])
                     except ValueError:
                         continue
-                    total_exp += database.get_exp(word, data[1],
-                                                  data[2], data[3])
+                    total_exp += database.get_time_exp(word, data[1],
+                                                  data[2], data[3], 1)
                 reply_msg = '總共獲得：{} 經驗'.format(total_exp)
 
         # The reply_msg maybe picture so we need to check the instance
