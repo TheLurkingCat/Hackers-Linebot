@@ -397,7 +397,7 @@ def handle_message(event):
                             data[i] = int(data[i])
                     except ValueError:
                         continue
-                    total_time += database.get_time_exp(word, data[1],
+                    total_time += database.get_time_exp(data[0], data[1],
                                                     data[2], data[3], 0)
                 hour, minute = divmod(total_time, 60)
                 day, hour = divmod(hour, 24)
@@ -416,7 +416,7 @@ def handle_message(event):
                             data[i] = int(data[i])
                     except ValueError:
                         continue
-                    total_exp += database.get_time_exp(word, data[1],
+                    total_exp += database.get_time_exp(data[0], data[1],
                                                   data[2], data[3], 1)
                 reply_msg = '總共獲得：{} 經驗'.format(total_exp)
 
