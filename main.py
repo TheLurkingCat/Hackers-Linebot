@@ -236,11 +236,12 @@ class DataBase(object):
         Returns:
             How much time it take (minutes).
         """
-        title = self.correct(title)
         try:
-            total_time = self.data_table[n][title][str(level2)] - self.data_table[n][title][str(level1+1)]
+            total_time = self.data_table[n][title][str(level2)]
+            total_time -= self.data_table[n][title][str(level1)] if level1 else 0
         except KeyError:
             return 0 
+        print(total_time)
         total_time *= number
         return total_time
 
@@ -390,6 +391,7 @@ def handle_message(event):
 
                 for data in tofind:
                     data = data.split()
+                    data[0] = self.correct(data[0])
                     if not database.is_wiki_page(data[0]):
                         continue
                     try:
@@ -409,6 +411,7 @@ def handle_message(event):
 
                 for data in tofind:
                     data = data.split()
+                    data[0] = self.correct(data[0])
                     if not database.is_wiki_page(data[0]):
                         continue
                     try:
