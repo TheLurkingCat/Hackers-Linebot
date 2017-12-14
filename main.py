@@ -234,17 +234,12 @@ class DataBase(object):
         Returns:
             How much time it take (minutes).
         """
-        total_time = numpy.array([0, 0, 0])
         try:
-            for level in range(level1+1, level2+1):
-                total_time += numpy.array(self.time_table[title][str(level)])
+            total_time = self.time_table[str(level2)] - self.time_table[str(level1+1)]
         except KeyError:
-            return 0
-        if number > 0:
-            total_time *= number
-        minute = total_time[0] * 1440 + total_time[1] * 60 + total_time[2]
-
-        return minute
+            return 0 
+        total_time *= number
+        return total_time
 
     def get_exp(self, title, number, level1, level2):
         """Get the upgrade experience from level1 to level2.
@@ -258,9 +253,10 @@ class DataBase(object):
         Returns:
             How many experiences will gain.
         """
-        exp = self.experience[title]
-        total_exp = exp[str(level2)]
-        total_exp -= exp[str(level1)] if level1 else 0
+        try:
+            total_exp = self.experience[str(level2)] - self.experience[str(level1+1)]
+        except KeyError:
+            return 0
         total_exp *= number
         return total_exp
 
@@ -415,20 +411,13 @@ def handle_message(event):
                     try:
                         for i in range(1, 4):
                             data[i] = int(data[i])
-                            if data[i] > 21:
-                                data[i] = 21
-                            if data[i] < 0:
-                                data[i] = 0
                     except ValueError:
                         continue
-                    data[0] = database.correct(data[0])
-                    total_time += database.get_time(data[0], data[1],
+                    word = database.correct(data[0])
+                    total_time += database.get_time(word, data[1],
                                                     data[2], data[3])
-
-                hour = total_time // 60
-                minute = total_time % 60
-                day = hour // 24
-                hour = hour % 24
+                hour, minute = divmod(total_time, 60)
+                day, hour = divmod(hour, 24)
                 reply_msg = '總共需要：{}天{}小時{}分鐘'.format(day, hour, minute)
             elif event.message.text[:6] == '貓 計算經驗':
                 total_exp = 0
@@ -442,23 +431,18 @@ def handle_message(event):
                     try:
                         for i in range(1, 4):
                             data[i] = int(data[i])
-                            if data[i] > 21:
-                                data[i] = 21
-                            elif data[i] < 0:
-                                data[i] = 0
                     except ValueError:
                         continue
-                    data[0] = database.correct(data[0])
-                    total_exp += database.get_exp(data[0], data[1],
+                    word = database.correct(data[0])
+                    total_exp += database.get_exp(word, data[1],
                                                   data[2], data[3])
                 reply_msg = '總共獲得：{} 經驗'.format(total_exp)
 
-        if reply_msg:
-            # The reply_msg maybe picture so we need to check the instance
-            if isinstance(reply_msg, str):
-                reply_msg = TextSendMessage(reply_msg)
+        # The reply_msg maybe picture so we need to check the instance
+        if isinstance(reply_msg, str):
+            reply_msg = TextSendMessage(reply_msg)
 
-            bot.reply_message(event.reply_token, reply_msg)
+        bot.reply_message(event.reply_token, reply_msg)
 
     elif event.message.text[0] == '貓' and event.source.user_id in editors:
         text_msg = event.message.text.split(event.message.text[1])
