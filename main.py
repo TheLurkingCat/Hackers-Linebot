@@ -201,7 +201,8 @@ class DataBase(object):
         collection = self.db['correct']
 
         try:
-            return collection.find_one({'_id': 0})[word]
+            doc = collection.find_one({'_id': 0})
+            return doc[word]
         except KeyError:
             return word
 
@@ -413,7 +414,6 @@ def handle_message(event):
                             data[i] = int(data[i])
                     except ValueError:
                         continue
-                    word = database.correct(data[0])
                     total_time += database.get_time(word, data[1],
                                                     data[2], data[3])
                 hour, minute = divmod(total_time, 60)
@@ -433,7 +433,6 @@ def handle_message(event):
                             data[i] = int(data[i])
                     except ValueError:
                         continue
-                    word = database.correct(data[0])
                     total_exp += database.get_exp(word, data[1],
                                                   data[2], data[3])
                 reply_msg = '總共獲得：{} 經驗'.format(total_exp)
