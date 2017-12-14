@@ -391,7 +391,7 @@ def handle_message(event):
 
                 for data in tofind:
                     data = data.split()
-                    data[0] = self.correct(data[0])
+                    data[0] = database.correct(data[0])
                     if not database.is_wiki_page(data[0]):
                         continue
                     try:
@@ -411,7 +411,7 @@ def handle_message(event):
 
                 for data in tofind:
                     data = data.split()
-                    data[0] = self.correct(data[0])
+                    data[0] = database.correct(data[0])
                     if not database.is_wiki_page(data[0]):
                         continue
                     try:
