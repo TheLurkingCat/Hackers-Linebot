@@ -26,10 +26,7 @@ class DataBase(object):
         uri: Mongodb connect uri.
         db: The name of the database.
         collection: Defualt collection of database.
-        time_table: The table contains the upgrade time
-                    of all progrsm and node.
-        experience: The table contains the upgrade experience
-                    of all progrsm and node.
+        data_table: Contains time_table and experience_table
 
     """
     def __init__(self):
@@ -225,7 +222,7 @@ class DataBase(object):
         return page in document['pages']
 
     def get_time_exp(self, title, number, level1, level2, n):
-        """Get the upgrade time from level1 to level2.
+        """Get the upgrade time or exp from level1 to level2.
 
         Args:
             title: A program or node name.
@@ -237,13 +234,12 @@ class DataBase(object):
             How much time it take (minutes).
         """
         try:
-            total_time = self.data_table[n][title][str(level2)]
-            total_time -= self.data_table[n][title][str(level1)] if level1 else 0
+            total = self.data_table[n][title][level2]
+            total -= self.data_table[n][title][level1] if level1 != '0' else 0
         except KeyError:
-            return 0 
-        print(total_time)
-        total_time *= number
-        return total_time
+            return 0
+        total *= number
+        return total
 
 
 class Net(object):
@@ -384,7 +380,12 @@ def handle_message(event):
             if text_msg[3] == '圖片':
                 reply_msg = database.get_picture(text_msg[1], text_msg[2])
         else:
-            if event.message.text[:6] == '貓 計算時間':
+            switch = ('計算時間', '計算經驗')
+            try:
+                search_type = switch.index(text_msg[2])
+            except ValueError:
+                search_type = None
+            if search_type is not None:
                 total_time = 0
                 tofind = event.message.text.split('\n')
                 del tofind[0]
@@ -395,40 +396,29 @@ def handle_message(event):
                     if not database.is_wiki_page(data[0]):
                         continue
                     try:
-                        for i in range(1, 4):
-                            data[i] = int(data[i])
+                        data[1] = int(data[1])
                     except ValueError:
                         continue
-                    total_time += database.get_time_exp(data[0], data[1],
-                                                    data[2], data[3], 0)
-                hour, minute = divmod(total_time, 60)
-                day, hour = divmod(hour, 24)
-                reply_msg = '總共需要：{}天{}小時{}分鐘'.format(day, hour, minute)
-            elif event.message.text[:6] == '貓 計算經驗':
-                total_exp = 0
-                tofind = event.message.text.split('\n')
-                del tofind[0]
-
-                for data in tofind:
-                    data = data.split()
-                    data[0] = database.correct(data[0])
-                    if not database.is_wiki_page(data[0]):
-                        continue
-                    try:
-                        for i in range(1, 4):
-                            data[i] = int(data[i])
-                    except ValueError:
-                        continue
-                    total_exp += database.get_time_exp(data[0], data[1],
-                                                  data[2], data[3], 1)
-                reply_msg = '總共獲得：{} 經驗'.format(total_exp)
+                    total += database.get_time_exp(data[0], data[1],
+                                                   data[2], data[3],
+                                                   search_type)
+                if search_type:
+                    reply_msg = '總共獲得：{} 經驗'.format(total)
+                else:
+                    hour, minute = divmod(total, 60)
+                    day, hour = divmod(hour, 24)
+                    reply_msg = '總共需要：{}天{}小時{}分鐘'.format(day, hour, minute)
 
         # The reply_msg maybe picture so we need to check the instance
         if isinstance(reply_msg, str):
             reply_msg = TextSendMessage(reply_msg)
-
-        bot.reply_message(event.reply_token, reply_msg)
-
+        try:
+            bot.reply_message(event.reply_token, reply_msg)
+        except LineBotApiError as e:
+            reply_msg = 'code:{}\nmessage:{}\ndetails:{}'.format(
+                e.status_code, e.error.message, e.error.details)
+            bot.push_message(environ['TalkID'],
+                             TextSendMessage(reply_msg))
     elif event.message.text[0] == '貓' and event.source.user_id in editors:
         text_msg = event.message.text.split(event.message.text[1])
         text_msg = [x for x in text_msg if x]
