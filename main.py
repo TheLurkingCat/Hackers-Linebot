@@ -386,7 +386,7 @@ def handle_message(event):
             except ValueError:
                 search_type = None
             if search_type is not None:
-                total_time = 0
+                total = 0
                 tofind = event.message.text.split('\n')
                 del tofind[0]
 
