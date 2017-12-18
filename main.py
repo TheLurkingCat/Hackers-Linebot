@@ -410,7 +410,7 @@ def handle_message(event):
                     reply_msg = '總共需要：{}天{}小時{}分鐘'.format(day, hour, minute)
 
         # The reply_msg maybe picture so we need to check the instance
-        if reply_message:
+        if reply_msg:
             if isinstance(reply_msg, str):
                 reply_msg = TextSendMessage(reply_msg)
             try:
