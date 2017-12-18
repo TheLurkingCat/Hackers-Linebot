@@ -382,7 +382,7 @@ def handle_message(event):
         else:
             switch = ('計算時間', '計算經驗')
             try:
-                search_type = switch.index(text_msg[2])
+                search_type = switch.index(text_msg[1])
             except ValueError:
                 search_type = None
             if search_type is not None:
@@ -410,15 +410,16 @@ def handle_message(event):
                     reply_msg = '總共需要：{}天{}小時{}分鐘'.format(day, hour, minute)
 
         # The reply_msg maybe picture so we need to check the instance
-        if isinstance(reply_msg, str):
-            reply_msg = TextSendMessage(reply_msg)
-        try:
-            bot.reply_message(event.reply_token, reply_msg)
-        except LineBotApiError as e:
-            reply_msg = 'code:{}\nmessage:{}\ndetails:{}'.format(
-                e.status_code, e.error.message, e.error.details)
-            bot.push_message(environ['TalkID'],
-                             TextSendMessage(reply_msg))
+        if reply_message:
+            if isinstance(reply_msg, str):
+                reply_msg = TextSendMessage(reply_msg)
+            try:
+                bot.reply_message(event.reply_token, reply_msg)
+            except LineBotApiError as e:
+                reply_msg = 'code:{}\nmessage:{}\ndetails:{}'.format(
+                    e.status_code, e.error.message, e.error.details)
+                bot.push_message(environ['TalkID'],
+                                 TextSendMessage(reply_msg))
     elif event.message.text[0] == '貓' and event.source.user_id in editors:
         text_msg = event.message.text.split(event.message.text[1])
         text_msg = [x for x in text_msg if x]
