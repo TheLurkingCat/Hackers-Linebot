@@ -4,5 +4,7 @@ html5lib==1.0.1
 line-bot-sdk==1.5.0
 lxml==4.1.1
 numpy==1.13.3
-pandas==0.21.1
+pandas==0.22.0
 pymongo==3.6.0
+setuptools==38.2.5
+werkzeug==0.14.1
