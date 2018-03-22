@@ -368,7 +368,7 @@ def handle_message(event):
 
         elif msg_length == 3:
             if text_msg[1] == '群規':
-                reply_msg = database.get_rules(text_msg[2])
+                reply_msg = database.get_rules(int(text_msg[2]))
 
             elif database.is_wiki_page(text_msg[1]):
                 try:
