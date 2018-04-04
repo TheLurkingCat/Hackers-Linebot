@@ -1,4 +1,5 @@
 from os import environ
+from json import loads
 
 from flask import Flask, request, abort
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
@@ -16,7 +17,6 @@ handler = WebhookHandler(environ['ChannelSecret'])
 editors = (environ['LineID1'], environ['LineID2'],
            environ['LineID3'], environ['LineID4'])
 
-
 class DataBase(object):
     """Handles MongoDB requests
 
@@ -33,8 +33,8 @@ class DataBase(object):
         """Initial the connection"""
         self.UserID = environ['UserID']
         self.UserPassword = environ['UserPassword']
-        self.uri = "mongodb://{}:{}@ds149743.mlab.com:49743/meow".format(
-                    self.UserID, self.UserPassword)
+        self.uri = "mongodb://{}:{}@ds149743.mlab.com:49743/meow"
+        self.uri.format(self.UserID, self.UserPassword)
         self.db = MongoClient(self.uri)['meow']
         self.collection = self.db['name']
         time = self.db['time'].find_one({'_id': 0})
@@ -194,7 +194,7 @@ class DataBase(object):
             The correct spelling of the word.
 
         Raises:
-            KeyError: When the word doesn't need to correct.
+            KeyError: When the word doesn't need to be correct.
         """
         collection = self.db['correct']
 
@@ -235,7 +235,7 @@ class DataBase(object):
         """
         try:
             total = self.data_table[n][title][level2]
-            total -= self.data_table[n][title][level1] if level1 != '0' else 0
+            total -= self.data_table[n][title][level1]
         except KeyError:
             return 0
         total *= number
@@ -335,9 +335,9 @@ def handle_message(event):
     if (
       event.source.type == "group" and
       event.source.group_id == environ['TalkID']):
-
+        reply_msg = event.message.text
         bot.push_message(environ['GroupMain'],
-                         TextSendMessage(event.message.text))
+                         TextSendMessage(reply_msg))
 
     if event.message.text == "我的ID" and event.source.type == "user":
         bot.reply_message(event.reply_token,
@@ -368,7 +368,7 @@ def handle_message(event):
 
         elif msg_length == 3:
             if text_msg[1] == '群規':
-                reply_msg = database.get_rules(int(text_msg[2]))
+                reply_msg = database.get_rules(text_msg[2])
 
             elif database.is_wiki_page(text_msg[1]):
                 try:
