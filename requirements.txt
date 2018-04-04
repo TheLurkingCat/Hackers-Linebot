@@ -2,17 +2,7 @@ beautifulsoup4==4.6.0
 flask==0.12.2
 html5lib==1.0.1
 line-bot-sdk==1.5.0
-lxml==4.2.1
-numpy==1.14.2
-pandas==0.22.0
-pymongo==3.6.1
-setuptools==39.0.1
-werkzeug==0.14.1
-pytz==2018.3
-certifi==2018.1.18
-python-dateutil==2.7.2
-<<<<<<< HEAD
-wheel==0.31.0
-=======
-wheel==0.31.0
->>>>>>> 9bb156e570f429299700e087390ef4805e4b1a1c
+lxml==4.1.1
+numpy==1.13.3
+pandas==0.21.0
+pymongo==3.6.0
