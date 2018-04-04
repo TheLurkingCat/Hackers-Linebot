@@ -1,5 +1,4 @@
 from os import environ
-from json import loads
 
 from flask import Flask, request, abort
 from linebot.exceptions import InvalidSignatureError, LineBotApiError

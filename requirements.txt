@@ -11,4 +11,8 @@ werkzeug==0.14.1
 pytz==2018.3
 certifi==2018.1.18
 python-dateutil==2.7.2
+<<<<<<< HEAD
 wheel==0.31.0
+=======
+wheel==0.31.0
+>>>>>>> 9bb156e570f429299700e087390ef4805e4b1a1c
