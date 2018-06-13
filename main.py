@@ -3,9 +3,11 @@ from os import environ
 
 from flask import Flask, request, abort
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
-from linebot.models import (ImageSendMessage, MessageEvent,
-                            TextMessage, TextSendMessage)
-from linebot import LineBotApi, WebhookHandler
+from linebot.models.events import MessageEvent
+from linebot.models.messages import TextMessage
+from linebot.models.send_messages import ImageSendMessage, TextSendMessage, SendMessage
+from linebot.api import LineBotApi
+from linebot.webhook import WebhookHandler
 import numpy
 from pandas import read_html
 from pymongo import MongoClient
@@ -13,9 +15,17 @@ from urllib.parse import quote
 
 app = Flask(__name__)
 bot = LineBotApi(environ['ChannelAccessToken'])
+bot_reply = bot.reply_message
 handler = WebhookHandler(environ['ChannelSecret'])
-owners = literal_eval(environ['Owner'])
-editors = literal_eval(environ['Admins'])
+owners = set(literal_eval(environ['Owner']))
+editors = set(literal_eval(environ['Admins']))
+token = None
+
+
+def reply(x):
+    if not isinstance(x, SendMessage):
+        x = TextSendMessage(x)
+    bot_reply(token, x)
 
 
 class DataBase(object):
@@ -130,7 +140,7 @@ class DataBase(object):
         return False if previous_row[-1] > threshold else True
 
     def get_picture(self, name, level, program=False):
-        """Find out whether the name in database or not.
+        """Get picture of the program/node.
         Args:
             name: The name of the program or node.
             level: The level of the program or node.
@@ -309,6 +319,8 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     """Main hadler of the message event."""
+    global token
+    token = event.reply_token
     if (
             event.source.type == "group" and
             event.source.group_id == environ['TalkID']):
@@ -317,45 +329,41 @@ def handle_message(event):
                          TextSendMessage(event.message.text))
 
     if event.message.text == "我的ID" and event.source.type == "user":
-        bot.reply_message(event.reply_token,
-                          TextSendMessage(event.source.user_id))
+        reply(event.source.user_id)
 
     text_msg = event.message.text.split()
-
     if text_msg[0] == '貓':
         text_msg[1] = database.correct(text_msg[1])
-        reply_msg = ''
         msg_length = len(text_msg)
 
         if msg_length == 2:
             if text_msg[1] == '群規':
-                reply_msg = database.get_rules()
+                reply(database.get_rules())
 
             elif text_msg[1] == '執法者':
-                reply_msg = database.get_rules(-1)
+                reply(database.get_rules(-1))
 
             elif database.is_wiki_page(text_msg[1]):
-                reply_msg = net.get_uri(text_msg[1])
+                reply(net.get_uri(text_msg[1]))
 
             elif text_msg[1] == '使用說明':
-                reply_msg = '請參閱記事本'
+                reply('請參閱記事本')
 
-            else:
-                reply_msg = database.get_username(text_msg[1])
+            reply(database.get_username(text_msg[1]))
 
         elif msg_length == 3:
             if text_msg[1] == '群規':
-                reply_msg = database.get_rules(int(text_msg[2]))
+                reply(database.get_rules(int(text_msg[2])))
 
             elif database.is_wiki_page(text_msg[1]):
                 try:
-                    reply_msg = net.get_data(text_msg[1], int(text_msg[2]))
+                    reply(net.get_data(text_msg[1], int(text_msg[2])))
                 except ValueError:
-                    reply_msg = ''
+                    pass
 
         elif msg_length == 4 and event.source.type == "user":
             if text_msg[3] == '圖片':
-                reply_msg = database.get_picture(text_msg[1], text_msg[2])
+                reply(database.get_picture(text_msg[1], text_msg[2]))
         else:
             switch = ('計算時間', '計算經驗')
             try:
@@ -367,7 +375,7 @@ def handle_message(event):
                 tofind = event.message.text.split('\n')
                 del tofind[0]
 
-                for data in tofind:
+                for i, data in enumerate(tofind, 1):
                     data = data.split()
                     data[0] = database.correct(data[0])
                     if not database.is_wiki_page(data[0]):
@@ -376,27 +384,18 @@ def handle_message(event):
                         data[1] = int(data[1])
                     except ValueError:
                         continue
-                    total += database.get_time_exp(data[0], data[1],
-                                                   data[2], data[3],
-                                                   search_type)
+                    try:
+                        total += database.get_time_exp(*data,
+                                                       search_type)
+                    except TypeError:
+                        reply('Error：Not Enough Parameter at line {}！'.format(i))
                 if search_type:
-                    reply_msg = '總共獲得：{} 經驗'.format(total)
+                    reply('總共獲得：{} 經驗'.format(total))
                 else:
                     hour, minute = divmod(total, 60)
                     day, hour = divmod(hour, 24)
-                    reply_msg = '總共需要：{}天{}小時{}分鐘'.format(day, hour, minute)
+                    reply('總共需要：{}天{}小時{}分鐘'.format(day, hour, minute))
 
-        # The reply_msg maybe picture so we need to check the instance
-        if reply_msg:
-            if isinstance(reply_msg, str):
-                reply_msg = TextSendMessage(reply_msg)
-            try:
-                bot.reply_message(event.reply_token, reply_msg)
-            except LineBotApiError as e:
-                reply_msg = 'code:{}\nmessage:{}\ndetails:{}'.format(
-                    e.status_code, e.error.message, e.error.details)
-                bot.push_message(environ['TalkID'],
-                                 TextSendMessage(reply_msg))
     elif event.message.text[0] == '貓' and event.source.user_id in editors:
         text_msg = event.message.text.split(event.message.text[1])
         text_msg = [x for x in text_msg if x]
@@ -404,22 +403,17 @@ def handle_message(event):
         if msg_length == 3:
             if text_msg[2] == '退群':
                 database.delete_name(text_msg[1])
-                bot.reply_message(event.reply_token,
-                                  TextSendMessage('成功刪除一筆資料'))
+                reply('成功刪除一筆資料')
 
         elif msg_length == 4:
             if text_msg[1] == '新增資料':
                 database.add_name(text_msg[2], text_msg[3])
-                bot.reply_message(event.reply_token,
-                                  TextSendMessage('成功新增一筆資料'))
+                reply('成功新增一筆資料')
 
             elif text_msg[1] == '更新資料':
                 database.update_name(text_msg[2], text_msg[3])
-                bot.reply_message(event.reply_token,
-                                  TextSendMessage('成功更新一筆資料'))
-
+                reply('成功更新一筆資料')
 
 if __name__ == '__main__':
     # To get the port of this program running on.
-    print(editors, type(editors))
     app.run(host='0.0.0.0', port=int(environ['PORT']))
