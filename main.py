@@ -13,8 +13,8 @@ from urllib.parse import quote
 app = Flask(__name__)
 bot = LineBotApi(environ['ChannelAccessToken'])
 handler = WebhookHandler(environ['ChannelSecret'])
-editors = (environ['LineID1'], environ['LineID2'],
-           environ['LineID3'], environ['LineID4'])
+editors = (environ['Admins'])
+print(editors, type(editors))
 
 
 class DataBase(object):
