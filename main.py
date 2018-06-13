@@ -1,3 +1,4 @@
+from ast import literal_eval
 from os import environ
 
 from flask import Flask, request, abort
@@ -13,7 +14,8 @@ from urllib.parse import quote
 app = Flask(__name__)
 bot = LineBotApi(environ['ChannelAccessToken'])
 handler = WebhookHandler(environ['ChannelSecret'])
-editors = (environ['Admins'])
+owners = literal_eval(environ['Owner'])
+editors = literal_eval(environ['Admins'])
 
 
 class DataBase(object):
