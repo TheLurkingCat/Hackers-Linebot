@@ -14,7 +14,6 @@ app = Flask(__name__)
 bot = LineBotApi(environ['ChannelAccessToken'])
 handler = WebhookHandler(environ['ChannelSecret'])
 editors = (environ['Admins'])
-print(editors, type(editors))
 
 
 class DataBase(object):
@@ -420,4 +419,5 @@ def handle_message(event):
 
 if __name__ == '__main__':
     # To get the port of this program running on.
+    print(editors, type(editors))
     app.run(host='0.0.0.0', port=int(environ['PORT']))
