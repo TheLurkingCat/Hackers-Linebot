@@ -27,12 +27,13 @@ class DataBase(object):
         collection: Defualt collection of database.
         data_table: Contains time_table and experience_table
     """
+
     def __init__(self):
         """Initial the connection"""
         self.UserID = environ['UserID']
         self.UserPassword = environ['UserPassword']
         self.uri = "mongodb://{}:{}@ds149743.mlab.com:49743/meow".format(
-                    self.UserID, self.UserPassword)
+            self.UserID, self.UserPassword)
         self.db = MongoClient(self.uri)['meow']
         self.collection = self.db['name']
         time = self.db['time'].find_one({'_id': 0})
@@ -113,13 +114,13 @@ class DataBase(object):
             # Target and source items are aligned, and either
             # are different (cost of 1), or are the same (cost of 0).
             current_row[1:] = numpy.minimum(
-                    current_row[1:],
-                    numpy.add(previous_row[:-1], target != s))
+                current_row[1:],
+                numpy.add(previous_row[:-1], target != s))
 
             # Deletion (target grows shorter than source):
             current_row[1:] = numpy.minimum(
-                    current_row[1:],
-                    current_row[0: -1] + 1)
+                current_row[1:],
+                current_row[0: -1] + 1)
 
             previous_row = current_row
 
@@ -230,6 +231,7 @@ class Net(object):
         TC: Pages need to add '(TC)' after the uri
         column_one_name: The tuple contains the first column name of data
     """
+
     def __init__(self):
         """Initial the default values"""
         self.uri = "http://hackersthegame.wikia.com/wiki/"
@@ -261,8 +263,8 @@ class Net(object):
             for i in range(1, dataframe.shape[1]):
                 try:
                     reply_msg.append('{}：{}'.format(
-                      dataframe[i][0], dataframe[i][level]
-                      ))
+                        dataframe[i][0], dataframe[i][level]
+                    ))
                 except KeyError:
                     return ''
         return '\n'.join(reply_msg)
@@ -307,8 +309,8 @@ def callback():
 def handle_message(event):
     """Main hadler of the message event."""
     if (
-      event.source.type == "group" and
-      event.source.group_id == environ['TalkID']):
+            event.source.type == "group" and
+            event.source.group_id == environ['TalkID']):
 
         bot.push_message(environ['GroupMain'],
                          TextSendMessage(event.message.text))
