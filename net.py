@@ -27,6 +27,8 @@ class Net(object):
             KeyError: The summary of the node/program doesn't have 0 key
                       and the level is not exist.
         """
+        if level < 1:
+            return 'Error: Level limit exceed！'
         uri = self.get_uri(title)
         data = read_html(uri)
         reply_msg = []
@@ -37,7 +39,6 @@ class Net(object):
                     continue  # Avoid picture table
             except KeyError:
                 continue
-
             for i in range(1, dataframe.shape[1]):
                 try:
                     reply_msg.append('{}：{}'.format(

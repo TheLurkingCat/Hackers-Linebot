@@ -125,7 +125,7 @@ def handle_message(event):
                     except TypeError:
                         reply('Error：Not Enough Parameter at line {}！'.format(i))
                     except ValueError as e:
-                        reply(e)
+                        reply(str(e))
                 if search_type:
                     reply('總共獲得：{} 經驗'.format(total))
                 else:
