@@ -167,10 +167,10 @@ class DataBase(object):
         """
         collection = self.db['correct']
         doc = collection.find_one({'_id': 0})
-        if doc is None:
-            return word
-        else:
+        try:
             return doc[word]
+        except KeyError:
+            return word
 
     def is_wiki_page(self, page):
         """Check whether the page exist or not.
