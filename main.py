@@ -24,7 +24,10 @@ token = None
 def reply(x):
     if not isinstance(x, SendMessage):
         x = TextSendMessage(x)
-    bot_reply(token, x)
+    try:
+        bot_reply(token, x)
+    except LineBotApiError:
+        pass
 
 
 database = DataBase()
