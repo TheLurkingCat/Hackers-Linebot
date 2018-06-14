@@ -200,7 +200,7 @@ class DataBase(object):
         """
         threshold = 10
         if number > threshold:
-            raise(ValueError('Error: Node limit exceed at line {}！ Threshold: {}, got {}'.format(
+            raise(ValueError('Error: Node limit exceed at line {}！\nThreshold: {}, got {}'.format(
                 i, threshold, number)))
         try:
             total = self.data_table[n][title][level2]
