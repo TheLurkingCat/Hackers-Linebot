@@ -148,24 +148,22 @@ class DataBase(object):
                      because program's pictures are same at all levels.
         Returns:
             A ImageSendMessage instance of picture.
-        Raises:
-            KeyError: When the name,level string doesn't exist.
         """
+
         index_name = name + str(level)
         collection = self.db['pictures']
         data = collection.find_one({'Name': index_name})
 
-        if data is None:
+        if data is None and not program:
             if program:
                 return ''
             return self.get_picture(name, '', program=True)
-
-        try:
+        if data is None:
+            return 'Error: Name or level is not correct！'
+        else:
             return ImageSendMessage(
                 original_content_url=data["originalContentUrl"],
                 preview_image_url=data["previewImageUrl"])
-        except KeyError:
-            return ''
 
     def get_rules(self, number=0):
         """Find out rules.
@@ -175,14 +173,13 @@ class DataBase(object):
                     -1 means the executers of the rules.
         Returns:
             The rule.
-        Raises:
-            KeyError: When the rule doesn't exist.
         """
         collection = self.db['rules']
-        try:
-            return collection.find_one({'_id': number})['rule']
-        except KeyError:
-            return ''
+        temp = collection.find_one({'_id': number})
+        if temp is None:
+            return 'Error: Rule not found！'
+        else:
+            return temp['rule']
 
     def correct(self, word):
         """Corrects the word that user misspell.
@@ -190,16 +187,13 @@ class DataBase(object):
             word: The word user types.
         Returns:
             The correct spelling of the word.
-        Raises:
-            KeyError: When the word doesn't need to correct.
         """
         collection = self.db['correct']
-
-        try:
-            doc = collection.find_one({'_id': 0})
-            return doc[word]
-        except KeyError:
+        doc = collection.find_one({'_id': 0})
+        if doc is None:
             return word
+        else:
+            return doc[word]
 
     def is_wiki_page(self, page):
         """Check whether the page exist or not.
@@ -216,21 +210,26 @@ class DataBase(object):
 
         return page in document['pages']
 
-    def get_time_exp(self, title, number, level1, level2, n):
+    def get_time_exp(self, title, number, level1, level2, n, i):
         """Get the upgrade time or exp from level1 to level2.
         Args:
             title: A program or node name.
             number: The amount of the node that need to upgrade.
             level1: The level of the node now.
             level2: The level the node will be after upgrade
+            n: 0 for time 1 for exp
         Returns:
             How much time it take (minutes).
         """
+        threshold = 10
+        if number > threshold:
+            raise(ValueError('Error: Node limit exceed at line {}！ Threshold: {}, got {}'.format(
+                i, threshold, number)))
         try:
             total = self.data_table[n][title][level2]
-            total -= self.data_table[n][title][level1] if level1 != '0' else 0
+            total -= self.data_table[n][title][level1]
         except KeyError:
-            return 0
+            raise(ValueError('Error: Incorrect value at line {}！'.format(i)))
         total *= number
         return total
 
@@ -240,14 +239,14 @@ class Net(object):
     Attributes:
         uri: The uri of the hackers wikia
         TC: Pages need to add '(TC)' after the uri
-        column_one_name: The tuple contains the first column name of data
+        column_one_name: The set contains the first column name of data
     """
 
     def __init__(self):
         """Initial the default values"""
         self.uri = "http://hackersthegame.wikia.com/wiki/"
-        self.TC = ("幻影", "核心", "入侵", "入侵策略")
-        self.column_one_name = ('節點等級', '等級')
+        self.TC = set(["幻影", "核心", "入侵", "入侵策略"])
+        self.column_one_name = set(['節點等級', '等級'])
 
     def get_data(self, title, level):
         """Get the data from wikia.
@@ -277,7 +276,7 @@ class Net(object):
                         dataframe[i][0], dataframe[i][level]
                     ))
                 except KeyError:
-                    return ''
+                    return 'Error: Level limit exceed！'
         return '\n'.join(reply_msg)
 
     def get_uri(self, title):
@@ -287,10 +286,10 @@ class Net(object):
         Returns:
             The uri of the page.
         """
-        uri = self.uri + quote(title, safe='')
+        uri = '{}{}'.format(self.uri, quote(title, safe=''))
 
         if title in self.TC:
-            uri += "%28TC%29"
+            return "{}%28TC%29".format(uri)
         return uri
 
 
@@ -356,10 +355,7 @@ def handle_message(event):
                 reply(database.get_rules(int(text_msg[2])))
 
             elif database.is_wiki_page(text_msg[1]):
-                try:
-                    reply(net.get_data(text_msg[1], int(text_msg[2])))
-                except ValueError:
-                    pass
+                reply(net.get_data(text_msg[1], int(text_msg[2])))
 
         elif msg_length == 4 and event.source.type == "user":
             if text_msg[3] == '圖片':
@@ -370,6 +366,7 @@ def handle_message(event):
                 search_type = switch.index(text_msg[1])
             except ValueError:
                 search_type = None
+                reply('Error: Search type not support at line 1')
             if search_type is not None:
                 total = 0
                 tofind = event.message.text.split('\n')
@@ -385,10 +382,11 @@ def handle_message(event):
                     except ValueError:
                         continue
                     try:
-                        total += database.get_time_exp(*data,
-                                                       search_type)
+                        total += database.get_time_exp(*data, search_type, i)
                     except TypeError:
                         reply('Error：Not Enough Parameter at line {}！'.format(i))
+                    except ValueError as e:
+                        reply(e)
                 if search_type:
                     reply('總共獲得：{} 經驗'.format(total))
                 else:
@@ -413,6 +411,7 @@ def handle_message(event):
             elif text_msg[1] == '更新資料':
                 database.update_name(text_msg[2], text_msg[3])
                 reply('成功更新一筆資料')
+
 
 if __name__ == '__main__':
     # To get the port of this program running on.
