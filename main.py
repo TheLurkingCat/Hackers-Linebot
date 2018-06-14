@@ -111,7 +111,7 @@ def handle_message(event):
                 tofind = event.message.text.split('\n')
                 del tofind[0]
 
-                for i, data in enumerate(tofind, 1):
+                for i, data in enumerate(tofind, 2):
                     data = data.split()
                     data[0] = database.correct(data[0])
                     if not database.is_wiki_page(data[0]):
