@@ -8,6 +8,7 @@ from linebot.models.messages import TextMessage
 from linebot.models.send_messages import TextSendMessage, SendMessage
 from linebot.api import LineBotApi
 from linebot.webhook import WebhookHandler
+from requests import post
 
 from database import DataBase
 from net import Net
@@ -38,8 +39,10 @@ net = Net()
 def callback():
     """Validate the signature and call the handler."""
     # get X-Line-Signature header value
-    signature = request.headers['X-Line-Signature']
-
+    try:
+        signature = request.headers['X-Line-Signature']
+    except KeyError:
+        abort(401)
     # get request body as text
     body = request.get_data(as_text=True)
 
@@ -69,6 +72,14 @@ def handle_message(event):
     if event.message.text == "Changelog":
         with open('changelog.txt', 'r') as f:
             reply(f.read())
+    if event.message.text == 'Selftest':
+        t = post('https://little-cat.herokuapp.com/').status_code
+        if t == 401:
+            reply('Server is running！')
+        elif t == 500:
+            reply('Server crashed！')
+        else:
+            reply(str(t))
     text_msg = event.message.text.split()
     if text_msg[0] == '貓':
         text_msg[1] = database.correct(text_msg[1])
