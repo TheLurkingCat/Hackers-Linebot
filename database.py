@@ -198,6 +198,12 @@ class DataBase(object):
         Returns:
             How much time it take (minutes).
         """
+        if not self.is_wiki_page(title):
+            raise (ValueError('Error: {} not found at line {}！'.format(title, i)))
+
+        if level1 > level2:
+            raise (ValueError('Error: {} > {} at line {}！'.format(level1, level2, i)))
+
         threshold = 10
         if number > threshold:
             raise(ValueError('Error: Node limit exceed at line {}！\nThreshold: {}, got {}'.format(
