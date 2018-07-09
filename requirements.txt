@@ -15,3 +15,4 @@ requests==2.19.0
 setuptools==39.2.0
 urllib3==1.23
 wheel==0.31.1
+pyxDamerauLevenshtein==1.5

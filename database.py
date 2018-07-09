@@ -1,8 +1,10 @@
 from os import environ
 
-from linebot.models.send_messages import ImageSendMessage
 import numpy
+from linebot.models.send_messages import ImageSendMessage
 from pymongo import MongoClient
+
+from pyxdameraulevenshtein import damerau_levenshtein_distance
 
 
 class DataBase(object):
@@ -65,7 +67,7 @@ class DataBase(object):
         names = set(names)  # Remove the duplicates.
         return '\n'.join(names)
 
-    def levenshtein_distance(self, source, target, reversed=False):
+    def levenshtein_distance(self, source, target):
         """A copy of levenshtein_distance from wikibooks.
         https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Python
         Args:
@@ -76,45 +78,9 @@ class DataBase(object):
             True: When source can change into target in 1/2 target's length.
             False: Else returns False.
         """
-        source_length = len(source)
-        target_length = len(target)
-
-        if source_length < target_length:
-            return self.levenshtein_distance(target, source, reversed=True)
-        # So now we have source_length >= target_length.
-
-        if not target_length:
-            return False
-        # We call tuple() to force strings to be used as sequences
-        # ('c', 'a', 't', 's') - numpy uses them as values by default.
-        source = numpy.array(tuple(source))
-        target = numpy.array(tuple(target))
-
-        # We use a dynamic programming algorithm, but with the
-        # added optimization that we only need the last two rows
-        # of the matrix.
-        previous_row = numpy.arange(target.size + 1)
-        for s in source:
-            # Insertion (target grows longer than source):
-            current_row = previous_row + 1
-
-            # Substitution or matching:
-            # Target and source items are aligned, and either
-            # are different (cost of 1), or are the same (cost of 0).
-            current_row[1:] = numpy.minimum(
-                current_row[1:],
-                numpy.add(previous_row[:-1], target != s))
-
-            # Deletion (target grows shorter than source):
-            current_row[1:] = numpy.minimum(
-                current_row[1:],
-                current_row[0: -1] + 1)
-
-            previous_row = current_row
-
-        threshold = source_length / 2 if reversed else target_length / 2
-
-        return False if previous_row[-1] > threshold else True
+        distance = damerau_levenshtein_distance(source, target)
+        threshold = len(source) // 2 + 1
+        return False if distance > threshold else True
 
     def get_picture(self, name, level, program=False):
         """Get picture of the program/node.
