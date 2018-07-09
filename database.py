@@ -68,18 +68,19 @@ class DataBase(object):
         return '\n'.join(names)
 
     def levenshtein_distance(self, source, target):
-        """A copy of levenshtein_distance from wikibooks.
-        https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Python
+        """
+        A module build by 
+        https://github.com/gfairchild/pyxDamerauLevenshtein
         Args:
-            source: The longer string.
-            target: The shorter string.
-            reversed: True whe target's length is longer than source's.
+            source: The string user input.
+            target: The string to find.
         Returns:
             True: When source can change into target in 1/2 target's length.
             False: Else returns False.
         """
         distance = damerau_levenshtein_distance(source, target)
-        threshold = len(source) // 2 + 1
+
+        threshold = len(target) / 2
         return False if distance > threshold else True
 
     def get_picture(self, name, level, program=False):
