@@ -4,7 +4,7 @@ import numpy
 from linebot.models.send_messages import ImageSendMessage
 from pymongo import MongoClient
 
-from pyxdameraulevenshtein import damerau_levenshtein_distance
+from pyxdameraulevenshtein import normalized_damerau_levenshtein_distance
 
 
 class DataBase(object):
@@ -78,10 +78,8 @@ class DataBase(object):
             True: When source can change into target in 1/2 target's length.
             False: Else returns False.
         """
-        distance = damerau_levenshtein_distance(source, target)
-
-        threshold = len(target) / 2
-        return False if distance > threshold else True
+        distance = normalized_damerau_levenshtein_distance(source, target)
+        return distance < 0.5
 
     def get_picture(self, name, level, program=False):
         """Get picture of the program/node.
@@ -168,10 +166,11 @@ class DataBase(object):
         if not self.is_wiki_page(title):
             raise (ValueError('Error: {} not found at line {}！'.format(title, i)))
 
-        if level1 > level2:
+        if int(level1) > int(level2):
             raise (ValueError('Error: {} > {} at line {}！'.format(level1, level2, i)))
 
         threshold = 10
+
         if number > threshold:
             raise(ValueError('Error: Node limit exceed at line {}！\nThreshold: {}, got {}'.format(
                 i, threshold, number)))

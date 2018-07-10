@@ -1,6 +1,5 @@
-from urllib.parse import quote
-
 from pandas import read_html
+from urllib.parse import quote
 
 
 class Net(object):
