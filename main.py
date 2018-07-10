@@ -107,7 +107,7 @@ def handle_message(event):
             elif database.is_wiki_page(text_msg[1]):
                 reply(net.get_data(text_msg[1], int(text_msg[2])))
 
-        elif msg_length == 4 and event.source.type == "user":
+        elif msg_length == 4 and (event.source.type == "user" or event.source.user_id in editors):
             if text_msg[3] == '圖片':
                 reply(database.get_picture(text_msg[1], text_msg[2]))
         else:
