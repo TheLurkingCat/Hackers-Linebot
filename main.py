@@ -25,12 +25,13 @@ token = None
 input_str = ''
 isgroup = False
 state = False
+spam_checker = AntiSpamer(int(time()))
 
 
 def reply(x):
-
+    global spam_checker
     if not isinstance(x, SendMessage):
-        if 'spam_checker' not in locals() or spam_checker.outdated(int(time())):
+        if spam_checker.outdated(int(time())):
             spam_checker = AntiSpamer(int(time()))
         for search_text, reply_msg in spam_checker.spamlist:
             if reply_msg == x != '' and DataBase.levenshtein_distance(search_text, input_str, 0.75):
