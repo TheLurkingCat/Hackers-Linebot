@@ -99,7 +99,8 @@ def handle_message(event):
     if text_msg[0] == '貓':
         if state:
             return
-        isgroup = True if event.source.type == "group" else False
+        isgroup = True if event.source.type == "group" and event.source.group_id == environ[
+            'GroupMain'] else False
         text_msg[1] = database.correct(text_msg[1])
         msg_length = len(text_msg)
         input_str = event.message.text[2:]

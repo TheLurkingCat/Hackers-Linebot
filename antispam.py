@@ -4,7 +4,7 @@ class AntiSpamer(object):
         self.create_time = time
 
     def outdated(self, time):
-        return time - self.create_time > 3600
+        return time - self.create_time > 18000
 
     def unlock(self):
         self.spamlist.clear()
