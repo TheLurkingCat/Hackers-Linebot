@@ -24,6 +24,7 @@ editors = set(literal_eval(environ['Admins']))
 token = None
 input_str = ''
 isgroup = False
+state = False
 
 
 def reply(x):
@@ -67,7 +68,7 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     """Main hadler of the message event."""
-    global token, input_str, isgroup
+    global token, input_str, isgroup, state
     token = event.reply_token
     if (
             event.source.type == "group" and
@@ -78,7 +79,10 @@ def handle_message(event):
 
     if event.message.text == "我的ID" and event.source.type == "user":
         reply(event.source.user_id)
-
+    if event.message.text == '關機' and event.source.user_id in owners:
+        state = True
+    if event.message.text == '開機' and event.source.user_id in owners:
+        state = False
     if event.message.text == 'Selftest':
         t = post('https://little-cat.herokuapp.com/').status_code
         if t == 401:
@@ -89,6 +93,8 @@ def handle_message(event):
             reply(str(t))
     text_msg = event.message.text.split()
     if text_msg[0] == '貓':
+        if state:
+            return
         isgroup = True if event.source.type == "group" else False
         text_msg[1] = database.correct(text_msg[1])
         msg_length = len(text_msg)
