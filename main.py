@@ -37,8 +37,8 @@ def reply(x):
             for search_text, reply_msg in spam_checker.spamlist:
                 if reply_msg == x and DataBase.levenshtein_distance(search_text, input_str, 0.75):
                     return
-        if x:
             spam_checker.spamlist.add((input_str, x))
+        if x:
             x = TextSendMessage(x)
             bot_reply(token, x)
 
@@ -85,6 +85,8 @@ def handle_message(event):
         state = True
     if event.message.text == '開機' and event.source.user_id in owners:
         state = False
+    if event.message.text == '解鎖' and event.source.user_id in owners:
+        spam_checker.unlock()
     if event.message.text == 'Selftest':
         t = post('https://little-cat.herokuapp.com/').status_code
         if t == 401:
