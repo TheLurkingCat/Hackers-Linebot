@@ -41,6 +41,8 @@ def reply(x):
         if x:
             x = TextSendMessage(x)
             bot_reply(token, x)
+    else:
+        bot_reply(token, x)
 
 
 database = DataBase()
