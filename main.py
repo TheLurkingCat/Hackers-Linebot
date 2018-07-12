@@ -34,12 +34,13 @@ def reply(x):
         if spam_checker.outdated(int(time())):
             spam_checker = AntiSpamer(int(time()))
         for search_text, reply_msg in spam_checker.spamlist:
-            if reply_msg == x != '' and DataBase.levenshtein_distance(search_text, input_str, 0.75):
+            if reply_msg == x and DataBase.levenshtein_distance(search_text, input_str, 0.75):
                 break
         else:
-            spam_checker.spamlist.add((input_str, x))
-            x = TextSendMessage(x)
-            bot_reply(token, x)
+            if x:
+                spam_checker.spamlist.add((input_str, x))
+                x = TextSendMessage(x)
+                bot_reply(token, x)
 
 
 database = DataBase()
