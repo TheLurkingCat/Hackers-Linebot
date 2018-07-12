@@ -56,18 +56,19 @@ class DataBase(object):
             elif documents['gamename'] == name:
                 names.append(documents['linename'])
             else:
-                if self.levenshtein_distance(name, documents['linename']):
+                if self.levenshtein_distance(name, documents['linename'], 0.5):
                     names.append('{}--->{}'.format(documents['linename'],
                                                    documents['gamename']))
 
-                if self.levenshtein_distance(name, documents['gamename']):
+                if self.levenshtein_distance(name, documents['gamename'], 0.5):
                     names.append('{}--->{}'.format(documents['gamename'],
                                                    documents['linename']))
 
         names = set(names)  # Remove the duplicates.
         return '\n'.join(names)
 
-    def levenshtein_distance(self, source, target):
+    @staticmethod
+    def levenshtein_distance(source, target, threshold):
         """
         A module build by 
         https://github.com/gfairchild/pyxDamerauLevenshtein
@@ -79,7 +80,7 @@ class DataBase(object):
             False: Else returns False.
         """
         distance = normalized_damerau_levenshtein_distance(source, target)
-        return distance < 0.5
+        return distance < threshold
 
     def get_picture(self, name, level, program=False):
         """Get picture of the program/node.

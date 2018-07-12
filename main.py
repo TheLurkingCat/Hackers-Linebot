@@ -1,15 +1,17 @@
 from ast import literal_eval
 from os import environ
+from time import time
 
-from flask import Flask, request, abort
+from flask import Flask, abort, request
+from linebot.api import LineBotApi
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models.events import MessageEvent
 from linebot.models.messages import TextMessage
-from linebot.models.send_messages import TextSendMessage, SendMessage
-from linebot.api import LineBotApi
+from linebot.models.send_messages import SendMessage, TextSendMessage
 from linebot.webhook import WebhookHandler
 from requests import post
 
+from antispam import AntiSpamer
 from database import DataBase
 from net import Net
 
@@ -20,15 +22,21 @@ handler = WebhookHandler(environ['ChannelSecret'])
 owners = set(literal_eval(environ['Owner']))
 editors = set(literal_eval(environ['Admins']))
 token = None
+input_str = ''
 
 
 def reply(x):
+
     if not isinstance(x, SendMessage):
-        x = TextSendMessage(x)
-    try:
-        bot_reply(token, x)
-    except LineBotApiError:
-        pass
+        if 'spam_checker' not in locals() or spam_checker.outdated(int(time())):
+            spam_checker = AntiSpamer(int(time()))
+        for search_text, reply_msg in spam_checker.spamlist:
+            if reply_msg == x != '' and DataBase.levenshtein_distance(search_text, input_str, 0.75):
+                break
+        else:
+            spam_checker.spamlist.add((input_str, x))
+            x = TextSendMessage(x)
+            bot_reply(token, x)
 
 
 database = DataBase()
@@ -58,7 +66,7 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     """Main hadler of the message event."""
-    global token
+    global token, input_str
     token = event.reply_token
     if (
             event.source.type == "group" and
@@ -69,9 +77,7 @@ def handle_message(event):
 
     if event.message.text == "我的ID" and event.source.type == "user":
         reply(event.source.user_id)
-    if event.message.text == "Changelog":
-        with open('changelog.txt', 'r') as f:
-            reply(f.read())
+
     if event.message.text == 'Selftest':
         t = post('https://little-cat.herokuapp.com/').status_code
         if t == 401:
@@ -84,7 +90,7 @@ def handle_message(event):
     if text_msg[0] == '貓':
         text_msg[1] = database.correct(text_msg[1])
         msg_length = len(text_msg)
-
+        input_str = event.message.text[2:]
         if msg_length == 2:
             if text_msg[1] == '群規':
                 reply(database.get_rules())
