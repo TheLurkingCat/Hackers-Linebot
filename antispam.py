@@ -1,5 +1,5 @@
 class AntiSpamer(object):
-    def __init____(self, time):
+    def __init___(self, time):
         self.spamlist = set()
         self.create_time = time
 

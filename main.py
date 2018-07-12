@@ -23,6 +23,7 @@ owners = set(literal_eval(environ['Owner']))
 editors = set(literal_eval(environ['Admins']))
 token = None
 input_str = ''
+isgroup = False
 
 
 def reply(x):
@@ -66,7 +67,7 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     """Main hadler of the message event."""
-    global token, input_str
+    global token, input_str, isgroup
     token = event.reply_token
     if (
             event.source.type == "group" and
@@ -88,6 +89,7 @@ def handle_message(event):
             reply(str(t))
     text_msg = event.message.text.split()
     if text_msg[0] == '貓':
+        isgroup = True if event.source.type == "group" else False
         text_msg[1] = database.correct(text_msg[1])
         msg_length = len(text_msg)
         input_str = event.message.text[2:]
