@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from os import environ
 from time import time
 
@@ -191,12 +191,14 @@ class Database(object):
         collection = self.db['banned']
         temp = time_int - self.threshold
         collection.delete_many({"time": {"$lte": temp}})
+        Taiwan_time = str(datetime.utcnow().replace(
+            microsecond=0) + timedelta(hours=8))
         for documents in collection.find():
             if self.levenshtein_distance(x, documents['input'], 0.75) and y == documents['output']:
                 return True
             else:
                 collection.insert_one(
-                    {"time": time_int, "input": x, "output": y})
+                    {"time": time_int, "time_string": Taiwan_time, "input": x, "output": y})
                 return False
         collection.insert_one(
             {"time": time_int, "input": x, "output": y})
@@ -211,5 +213,5 @@ class Database(object):
         output = []
         for documents in collection.find():
             output.append('{} banned at {}'.format(
-                documents['input'], datetime.fromtimestamp(documents['time'])))
+                documents['input'], documents['time_string']))
         return '\n'.join(output)
