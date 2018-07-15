@@ -1,4 +1,6 @@
+from datetime import datetime
 from os import environ
+from time import time
 
 import numpy
 from linebot.models.send_messages import ImageSendMessage
@@ -7,7 +9,7 @@ from pymongo import MongoClient
 from pyxdameraulevenshtein import normalized_damerau_levenshtein_distance
 
 
-class DataBase(object):
+class Database(object):
     """Handles MongoDB requests
     Attributes:
         UserID: User name of mongodb.
@@ -20,8 +22,8 @@ class DataBase(object):
 
     def __init__(self):
         """Initial the connection"""
-        self.UserID = environ['UserID']
-        self.UserPassword = environ['UserPassword']
+        self.UserID = 'linebot'  # environ['UserID']
+        self.UserPassword = 'James'  # environ['UserPassword']
         self.uri = "mongodb://{}:{}@ds149743.mlab.com:49743/meow".format(
             self.UserID, self.UserPassword)
         self.db = MongoClient(self.uri)['meow']
@@ -29,6 +31,7 @@ class DataBase(object):
         time = self.db['time'].find_one({'_id': 0})
         experience = self.db['time'].find_one({'_id': 1})
         self.data_table = (time, experience)
+        self.threshold = 18000
 
     def add_name(self, gamename, linename):
         self.collection.insert_one({"gamename": gamename,
@@ -70,7 +73,7 @@ class DataBase(object):
     @staticmethod
     def levenshtein_distance(source, target, threshold):
         """
-        A module build by 
+        A module build by
         https://github.com/gfairchild/pyxDamerauLevenshtein
         Args:
             source: The string user input.
@@ -182,3 +185,31 @@ class DataBase(object):
             raise(ValueError('Error: Incorrect value at line {}！'.format(i)))
         total *= number
         return total
+
+    def anti_spam(self, x, y):
+        time_int = int(time())
+        collection = self.db['banned']
+        temp = time_int - self.threshold
+        collection.delete_many({"time": {"$lte": temp}})
+        for documents in collection.find():
+            if self.levenshtein_distance(x, documents['input'], 0.75) and y == documents['output']:
+                return True
+            else:
+                collection.insert_one(
+                    {"time": time_int, "input": x, "output": y})
+                return False
+        collection.insert_one(
+            {"time": time_int, "input": x, "output": y})
+        return False
+
+    def unlock(self):
+        collection = self.db['banned']
+        collection.drop()
+
+    def get_banned_list(self):
+        collection = self.db['banned']
+        output = []
+        for documents in collection.find():
+            output.append('{} banned at {}'.format(
+                documents['input'], datetime.fromtimestamp(documents['time'])))
+        return '\n'.join(output)

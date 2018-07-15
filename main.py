@@ -1,6 +1,5 @@
 from ast import literal_eval
 from os import environ
-from time import time
 
 from flask import Flask, abort, request
 from linebot.api import LineBotApi
@@ -11,8 +10,7 @@ from linebot.models.send_messages import SendMessage, TextSendMessage
 from linebot.webhook import WebhookHandler
 from requests import post
 
-from antispam import AntiSpamer
-from database import DataBase
+from database import Database
 from net import Net
 
 app = Flask(__name__)
@@ -25,19 +23,12 @@ token = None
 input_str = ''
 isgroup = False
 state = False
-spam_checker = AntiSpamer(int(time()))
 
 
 def reply(x):
-    global spam_checker
     if not isinstance(x, SendMessage):
-        if spam_checker.outdated(int(time())):
-            spam_checker = AntiSpamer(int(time()))
-        if isgroup:
-            for search_text, reply_msg in spam_checker.spamlist:
-                if reply_msg == x and DataBase.levenshtein_distance(search_text, input_str, 0.75):
-                    return
-            spam_checker.spamlist.add((input_str, x))
+        if isgroup and database.anti_spam(input_str, x):
+            return
         if x:
             x = TextSendMessage(x)
             bot_reply(token, x)
@@ -45,7 +36,7 @@ def reply(x):
         bot_reply(token, x)
 
 
-database = DataBase()
+database = Database()
 net = Net()
 
 
@@ -88,7 +79,7 @@ def handle_message(event):
     if event.message.text == '開機' and event.source.user_id in owners:
         state = False
     if event.message.text == '解鎖' and event.source.user_id in owners:
-        spam_checker.unlock()
+        database.unlock()
     if event.message.text == 'Selftest':
         t = post('https://little-cat.herokuapp.com/').status_code
         if t == 401:
