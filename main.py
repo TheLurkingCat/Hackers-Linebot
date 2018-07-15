@@ -84,7 +84,9 @@ def handle_message(event):
         elif text == '解鎖':
             database.unlock()
         elif text == '封鎖清單':
-            bot_reply(token, TextSendMessage(database.get_banned_list()))
+            x = database.get_banned_list()
+            x = TextSendMessage(x if x else 'None')
+            bot_reply(token, x)
     if text == 'Selftest':
         t = post('https://little-cat.herokuapp.com/').status_code
         if t == 401:
