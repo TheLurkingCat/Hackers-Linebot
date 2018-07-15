@@ -191,8 +191,8 @@ class Database(object):
         collection = self.db['banned']
         temp = time_int - self.threshold
         collection.delete_many({"time": {"$lte": temp}})
-        Taiwan_time = str(datetime.utcnow().replace(
-            microsecond=0) + timedelta(hours=8))
+        Taiwan_time = str(datetime.utcnow().replace(second=0,
+                                                    microsecond=0) + timedelta(hours=8))
         for documents in collection.find():
             if self.levenshtein_distance(x, documents['input'], 0.75) and y == documents['output']:
                 return True
