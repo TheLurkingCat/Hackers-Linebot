@@ -201,7 +201,7 @@ class Database(object):
                     {"time": time_int, "time_string": Taiwan_time, "input": x, "output": y})
                 return False
         collection.insert_one(
-            {"time": time_int, "input": x, "output": y})
+            {"time": time_int, "time_string": Taiwan_time, "input": x, "output": y})
         return False
 
     def unlock(self):
