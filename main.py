@@ -64,23 +64,28 @@ def callback():
 def handle_message(event):
     """Main hadler of the message event."""
     global token, input_str, isgroup, state
+    text = event.message.text
     token = event.reply_token
     if (
             event.source.type == "group" and
             event.source.group_id == environ['TalkID']):
 
         bot.push_message(environ['GroupMain'],
-                         TextSendMessage(event.message.text))
+                         TextSendMessage(text))
 
-    if event.message.text == "我的ID" and event.source.type == "user":
+    if text == "我的ID" and event.source.type == "user":
         reply(event.source.user_id)
-    if event.message.text == '關機' and event.source.user_id in owners:
-        state = True
-    if event.message.text == '開機' and event.source.user_id in owners:
-        state = False
-    if event.message.text == '解鎖' and event.source.user_id in owners:
-        database.unlock()
-    if event.message.text == 'Selftest':
+
+    if event.source.user_id in owners:
+        if text == '關機':
+            state = True
+        elif text == '開機':
+            state = False
+        elif text == '解鎖':
+            database.unlock()
+        elif text == '封鎖清單':
+            bot_reply(token, TextSendMessage(database.get_banned_list()))
+    if text == 'Selftest':
         t = post('https://little-cat.herokuapp.com/').status_code
         if t == 401:
             reply('Server is running！')
@@ -88,7 +93,7 @@ def handle_message(event):
             reply('Server crashed！')
         else:
             reply(str(t))
-    text_msg = event.message.text.split()
+    text_msg = text.split()
     if text_msg[0] == '貓':
         if state:
             return
@@ -96,7 +101,7 @@ def handle_message(event):
             'GroupMain'] else False
         text_msg[1] = database.correct(text_msg[1])
         msg_length = len(text_msg)
-        input_str = event.message.text[2:]
+        input_str = text[2:]
         if msg_length == 2:
             if text_msg[1] == '群規':
                 reply(database.get_rules())
@@ -131,7 +136,7 @@ def handle_message(event):
                 reply('Error: Search type not support at line 1')
             if search_type is not None:
                 total = 0
-                tofind = event.message.text.split('\n')
+                tofind = text.split('\n')
                 del tofind[0]
 
                 for i, data in enumerate(tofind, 2):
@@ -156,8 +161,8 @@ def handle_message(event):
                     day, hour = divmod(hour, 24)
                     reply('總共需要：{}天{}小時{}分鐘'.format(day, hour, minute))
 
-    elif event.message.text[0] == '貓' and event.source.user_id in editors:
-        text_msg = event.message.text.split(event.message.text[1])
+    elif text[0] == '貓' and event.source.user_id in editors:
+        text_msg = text.split(text[1])
         text_msg = [x for x in text_msg if x]
         msg_length = len(text_msg)
         if msg_length == 3:
