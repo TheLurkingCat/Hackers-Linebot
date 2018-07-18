@@ -27,9 +27,9 @@ state = False
 
 def reply(x):
     if not isinstance(x, SendMessage):
-        if isgroup and database.anti_spam(input_str, x):
-            return
         if x:
+            if isgroup and database.anti_spam(input_str, x):
+                return
             x = TextSendMessage(x)
             bot_reply(token, x)
     else:
