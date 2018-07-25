@@ -22,8 +22,8 @@ class Database(object):
 
     def __init__(self):
         """Initial the connection"""
-        self.UserID = 'linebot'  # environ['UserID']
-        self.UserPassword = 'James'  # environ['UserPassword']
+        self.UserID = environ['UserID']
+        self.UserPassword = environ['UserPassword']
         self.uri = "mongodb://{}:{}@ds149743.mlab.com:49743/meow".format(
             self.UserID, self.UserPassword)
         self.db = MongoClient(self.uri)['meow']
@@ -191,15 +191,11 @@ class Database(object):
         collection = self.db['banned']
         temp = time_int - self.threshold
         collection.delete_many({"time": {"$lte": temp}})
-        Taiwan_time = str(datetime.utcnow().replace(second=0,
-                                                    microsecond=0) + timedelta(hours=8))
+        Taiwan_time = str(datetime.utcnow().replace(
+            microsecond=0) + timedelta(hours=8))
         for documents in collection.find():
             if self.levenshtein_distance(x, documents['input'], 0.75) and y == documents['output']:
                 return True
-            else:
-                collection.insert_one(
-                    {"time": time_int, "time_string": Taiwan_time, "input": x, "output": y})
-                return False
         collection.insert_one(
             {"time": time_int, "time_string": Taiwan_time, "input": x, "output": y})
         return False

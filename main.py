@@ -19,16 +19,17 @@ bot_reply = bot.reply_message
 handler = WebhookHandler(environ['ChannelSecret'])
 owners = set(literal_eval(environ['Owner']))
 editors = set(literal_eval(environ['Admins']))
+need_check = set(literal_eval(environ['Check']))
 token = None
 input_str = ''
 isgroup = False
 state = False
 
 
-def reply(x):
+def reply(x, check=None):
     if not isinstance(x, SendMessage):
         if x:
-            if isgroup and database.anti_spam(input_str, x):
+            if (check is not None or isgroup) and database.anti_spam(input_str, x):
                 return
             x = TextSendMessage(x)
             bot_reply(token, x)
@@ -76,6 +77,9 @@ def handle_message(event):
     if text == "我的ID" and event.source.type == "user":
         reply(event.source.user_id)
 
+    if text == "群組ID" and event.source.type == "group":
+        reply(event.source.group_id, 'check')
+
     if event.source.user_id in owners:
         if text == '關機':
             state = True
@@ -99,11 +103,10 @@ def handle_message(event):
     if text_msg[0] == '貓':
         if state:
             return
-        isgroup = True if event.source.type == "group" and event.source.group_id == environ[
-            'GroupMain'] else False
+        isgroup = True if event.source.type == "group" and event.source.group_id in need_check else False
         text_msg[1] = database.correct(text_msg[1])
         msg_length = len(text_msg)
-        input_str = text[2:]
+        input_str = ' '.join(text_msg[1:])
         if msg_length == 2:
             if text_msg[1] == '群規':
                 reply(database.get_rules())
