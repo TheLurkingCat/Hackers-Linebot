@@ -1,3 +1,7 @@
+Version: 2.39.1
+
+加上NoSQL escape
+
 Version: 2.38.0
 
 修正造成只會ban掉第一則訊息的問題

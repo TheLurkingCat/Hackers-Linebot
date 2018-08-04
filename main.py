@@ -127,8 +127,8 @@ def handle_message(event):
             if text_msg[1] == '群規':
                 try:
                     reply(database.get_rules(int(text_msg[2])))
-                except ValueError as e:
-                    reply(str(e))
+                except ValueError:
+                    pass
             elif database.is_wiki_page(text_msg[1]):
                 reply(net.get_data(text_msg[1], int(text_msg[2])))
 
