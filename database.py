@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from os import environ
+from re import compile
 from time import time
 
 import numpy
@@ -32,15 +33,22 @@ class Database(object):
         experience = self.db['time'].find_one({'_id': 1})
         self.data_table = (time, experience)
         self.threshold = 18000
+        self.pattern = compile(r'(.*){(.*)[$](.*)}(.*)')
 
     def add_name(self, gamename, linename):
+        if self.pattern.findall(gamename) or self.pattern.findall(linename):
+            raise ValueError('Invaild input, please contact admin!')
         self.collection.insert_one({"gamename": gamename,
                                     "linename": linename})
 
     def delete_name(self, gamename):
+        if self.pattern.findall(gamename):
+            raise ValueError('Invaild input, please contact admin!')
         self.collection.delete_many({'gamename': gamename})
 
     def update_name(self, gamename, linename):
+        if self.pattern.findall(gamename) or self.pattern.findall(linename):
+            raise ValueError('Invaild input, please contact admin!')
         self.collection.update_many({"gamename": gamename},
                                     {"$set": {"linename": linename}})
 
@@ -51,6 +59,8 @@ class Database(object):
         Returns:
             A string of name line-by-line.
         """
+        if self.pattern.findall(name):
+            raise ValueError('Invaild input, please contact admin!')
         names = []
 
         for documents in self.collection.find():
@@ -95,8 +105,9 @@ class Database(object):
         Returns:
             A ImageSendMessage instance of picture.
         """
-
         index_name = name + str(level)
+        if self.pattern.findall(index_name):
+            raise ValueError('Invaild input, please contact admin!')
         collection = self.db['pictures']
         data = collection.find_one({'Name': index_name})
 
@@ -120,6 +131,8 @@ class Database(object):
         Returns:
             The rule.
         """
+        if not isinstance(number, int):
+            raise ValueError('Invaild input, please contact admin!')
         collection = self.db['rules']
         temp = collection.find_one({'_id': number})
         if temp is None:

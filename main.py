@@ -119,19 +119,25 @@ def handle_message(event):
 
             elif text_msg[1] == '使用說明':
                 reply('請參閱記事本')
-
-            reply(database.get_username(text_msg[1]))
-
+            try:
+                reply(database.get_username(text_msg[1]))
+            except ValueError as e:
+                reply(str(e))
         elif msg_length == 3:
             if text_msg[1] == '群規':
-                reply(database.get_rules(int(text_msg[2])))
-
+                try:
+                    reply(database.get_rules(int(text_msg[2])))
+                except ValueError as e:
+                    reply(str(e))
             elif database.is_wiki_page(text_msg[1]):
                 reply(net.get_data(text_msg[1], int(text_msg[2])))
 
         elif msg_length == 4 and (event.source.type == "user" or event.source.user_id in editors):
             if text_msg[3] == '圖片':
-                reply(database.get_picture(text_msg[1], text_msg[2]))
+                try:
+                    reply(database.get_picture(text_msg[1], text_msg[2]))
+                except ValueError as e:
+                    reply(str(e))
         else:
             switch = ('計算時間', '計算經驗')
             try:
@@ -172,17 +178,29 @@ def handle_message(event):
         msg_length = len(text_msg)
         if msg_length == 3:
             if text_msg[2] == '退群':
-                database.delete_name(text_msg[1])
-                reply('成功刪除一筆資料')
+                try:
+                    database.delete_name(text_msg[1])
+                except ValueError as e:
+                    reply(str(e))
+                else:
+                    reply('成功刪除一筆資料')
 
         elif msg_length == 4:
             if text_msg[1] == '新增資料':
-                database.add_name(text_msg[2], text_msg[3])
-                reply('成功新增一筆資料')
+                try:
+                    database.add_name(text_msg[2], text_msg[3])
+                except ValueError as e:
+                    reply(str(e))
+                else:
+                    reply('成功新增一筆資料')
 
             elif text_msg[1] == '更新資料':
-                database.update_name(text_msg[2], text_msg[3])
-                reply('成功更新一筆資料')
+                try:
+                    database.update_name(text_msg[2], text_msg[3])
+                except ValueError as e:
+                    reply(str(e))
+                else:
+                    reply('成功更新一筆資料')
 
 
 if __name__ == '__main__':
