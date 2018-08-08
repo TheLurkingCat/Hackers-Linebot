@@ -4,9 +4,11 @@ from os import environ
 from flask import Flask, abort, request
 from linebot.api import LineBotApi
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
+from linebot.models.actions import MessageAction
 from linebot.models.events import MessageEvent
 from linebot.models.messages import TextMessage
 from linebot.models.send_messages import SendMessage, TextSendMessage
+from linebot.models.template import ButtonsTemplate, TemplateSendMessage
 from linebot.webhook import WebhookHandler
 from requests import post
 
@@ -25,10 +27,37 @@ input_str = ''
 isgroup = False
 state = False
 
+user_guide = TemplateSendMessage(
+    alt_text='簡單功能介紹',
+    template=ButtonsTemplate(
+        text='簡單功能介紹',
+        actions=[
+            MessageAction(
+                label='查群規',
+                text='貓 群規'
+            ),
+            MessageAction(
+                label='查名字',
+                text='貓 小貓貓'
+            ),
+            MessageAction(
+                label='查遊戲維基網址',
+                text='貓 光炮'
+            ),
+            MessageAction(
+                label='查遊戲內物品資料',
+                text='貓 光炮 21'
+            )
+        ]
+    )
+)
+
 
 def reply(x, check=None):
+    """回復使用者，但是會先檢查"""
     if not isinstance(x, SendMessage):
         if x:
+            # 如果在群組內發言而且沒有免檢查特權就檢查他
             if (check is not None or isgroup) and database.anti_spam(input_str, x):
                 return
             x = TextSendMessage(x)
@@ -43,16 +72,15 @@ net = Net()
 
 @app.route("/", methods=['POST'])
 def callback():
-    """Validate the signature and call the handler."""
-    # get X-Line-Signature header value
+    """確認簽名正確後呼叫handler"""
+
     try:
         signature = request.headers['X-Line-Signature']
     except KeyError:
         abort(401)
-    # get request body as text
+
     body = request.get_data(as_text=True)
 
-    # handle webhook body
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
@@ -63,10 +91,12 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    """Main hadler of the message event."""
+    """主控制器，沒什麼功能，類似一個switch去呼叫其他功能"""
+
     global token, input_str, isgroup, state
     text = event.message.text
     token = event.reply_token
+    # 透過某個群組喊話
     if (
             event.source.type == "group" and
             event.source.group_id == environ['TalkID']):
@@ -80,6 +110,7 @@ def handle_message(event):
     if text == "群組ID" and event.source.type == "group":
         reply(event.source.group_id, 'check')
 
+    # 管理指令們
     if event.source.user_id in owners:
         if text == '關機':
             state = True
@@ -91,14 +122,17 @@ def handle_message(event):
             x = database.get_banned_list()
             x = TextSendMessage(x if x else 'None')
             bot_reply(token, x)
+
+    # 連連看伺服器看看他有沒有活著
     if text == 'Selftest':
         t = post('https://little-cat.herokuapp.com/').status_code
         if t == 401:
-            reply('Server is running！')
+            reply('喵喵喵！')
         elif t == 500:
-            reply('Server crashed！')
+            reply('蹦蹦蹦！')
         else:
             reply(str(t))
+
     text_msg = text.split()
     if text_msg[0] == '貓':
         if state:
@@ -118,7 +152,7 @@ def handle_message(event):
                 reply(net.get_uri(text_msg[1]))
 
             elif text_msg[1] == '使用說明':
-                reply('請參閱記事本')
+                reply(user_guide)
             try:
                 reply(database.get_username(text_msg[1]))
             except ValueError as e:
@@ -132,19 +166,21 @@ def handle_message(event):
             elif database.is_wiki_page(text_msg[1]):
                 reply(net.get_data(text_msg[1], int(text_msg[2])))
 
-        elif msg_length == 4 and (event.source.type == "user" or event.source.user_id in editors):
-            if text_msg[3] == '圖片':
+        elif msg_length == 4:
+            if text_msg[3] == '圖片' and (event.source.type == "user" or event.source.user_id in editors):
                 try:
                     reply(database.get_picture(text_msg[1], text_msg[2]))
                 except ValueError as e:
                     reply(str(e))
+            elif text_msg[2] == '對應':
+                database.add_common_name(text_msg[1], text_msg[3])
         else:
             switch = ('計算時間', '計算經驗')
             try:
                 search_type = switch.index(text_msg[1])
             except ValueError:
                 search_type = None
-                reply('Error: Search type not support at line 1')
+
             if search_type is not None:
                 total = 0
                 tofind = text.split('\n')
@@ -162,7 +198,7 @@ def handle_message(event):
                     try:
                         total += database.get_time_exp(*data, search_type, i)
                     except TypeError:
-                        reply('Error：Not Enough Parameter at line {}！'.format(i))
+                        reply('錯誤: 第{}行參數不足！'.format(i))
                     except ValueError as e:
                         reply(str(e))
                 if search_type:
@@ -173,6 +209,7 @@ def handle_message(event):
                     reply('總共需要：{}天{}小時{}分鐘'.format(day, hour, minute))
 
     elif text[0] == '貓' and event.source.user_id in editors:
+        # Deprecated(未來會偏向用Excel更新)
         text_msg = text.split(text[1])
         text_msg = [x for x in text_msg if x]
         msg_length = len(text_msg)
@@ -204,5 +241,5 @@ def handle_message(event):
 
 
 if __name__ == '__main__':
-    # To get the port of this program running on.
+    # 取得當前運作的埠
     app.run(host='0.0.0.0', port=int(environ['PORT']))

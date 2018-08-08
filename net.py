@@ -1,42 +1,42 @@
-from pandas import read_html
 from urllib.parse import quote
+
+from pandas import read_html
 
 
 class Net(object):
-    """Handles the web crawler
-    Attributes:
-        uri: The uri of the hackers wikia
-        TC: Pages need to add '(TC)' after the uri
-        column_one_name: The set contains the first column name of data
+    """控制爬蟲引擎
+    屬性:
+        url: 維基最基本的網址
+        TC: 需要在後面加上 '(TC)' 才能正確識別的集合
+        column_one_name: 資料第一欄(column)的名稱
     """
 
     def __init__(self):
-        """Initial the default values"""
-        self.uri = "http://hackersthegame.wikia.com/wiki/"
+        """基本參數"""
+        self.url = "http://hackersthegame.wikia.com/wiki/"
         self.TC = set(["幻影", "核心", "入侵", "入侵策略"])
         self.column_one_name = set(['節點等級', '等級'])
 
     def get_data(self, title, level):
-        """Get the data from wikia.
-        Args:
-            title: The name of the program or node.
-            level: The level of the above title.
-        Returns:
-            The data fetch from the wikia.
-        Raises:
-            KeyError: The summary of the node/program doesn't have 0 key
-                      and the level is not exist.
+        """從維基頁面爬取資料
+
+        參數:
+            title: 程式或節點名稱
+            level: 欲查詢的等級
+        回傳:
+            爬到的資料
         """
         if level < 1:
-            return 'Error: Level limit exceed！'
-        uri = self.get_uri(title)
-        data = read_html(uri)
+            return '等級不存在！'
+        url = self.get_uri(title)
+        data = read_html(url)
         reply_msg = []
 
         for dataframe in data:
             try:
+                # 防止爬到圖片
                 if not dataframe[0][0] in self.column_one_name:
-                    continue  # Avoid picture table
+                    continue
             except KeyError:
                 continue
             for i in range(1, dataframe.shape[1]):
@@ -45,18 +45,19 @@ class Net(object):
                         dataframe[i][0], dataframe[i][level]
                     ))
                 except KeyError:
-                    return 'Error: Level limit exceed！'
+                    return '等級不存在！'
         return '\n'.join(reply_msg)
 
     def get_uri(self, title):
-        """Generates the wiki page's uri.
-        Args:
-            title: The page title.
-        Returns:
-            The uri of the page.
+        """生成正確網址
+
+        參數:
+            title: 頁面名稱
+        回傳:
+            正確的連結
         """
-        uri = '{}{}'.format(self.uri, quote(title, safe=''))
+        url = '{}{}'.format(self.url, quote(title, safe=''))
 
         if title in self.TC:
-            return "{}%28TC%29".format(uri)
-        return uri
+            return "{}%28TC%29".format(url)
+        return url
