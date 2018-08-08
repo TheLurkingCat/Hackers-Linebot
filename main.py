@@ -28,7 +28,7 @@ isgroup = False
 state = False
 
 user_guide = TemplateSendMessage(
-    alt_text='簡單功能介紹',
+    alt_text='電腦版無法顯示按紐，按鈕功能只是舉例，實際使用上請自行替換\n查群規: 貓 群規\n查名字: 貓 小貓貓\n查遊戲維基網址: 貓 光炮\n查遊戲內物品資料: 貓 光炮 21',
     template=ButtonsTemplate(
         text='簡單功能介紹',
         actions=[
