@@ -47,6 +47,10 @@ user_guide = TemplateSendMessage(
             MessageAction(
                 label='查遊戲內物品資料',
                 text='貓 光炮 21'
+            ),
+            MessageAction(
+                label='查一段等級之間經驗',
+                text='貓 計算經驗\n光炮 1 0 21\n守衛 3 20 21'
             )
         ]
     )
