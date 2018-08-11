@@ -92,14 +92,13 @@ def handle_message(event):
 
     global token, input_str, isgroup, state
     user_id = event.source.user_id
-    group_id = event.source.group_id
     source = event.source.type
     text = event.message.text
     token = event.reply_token
     # 透過某個群組喊話
     if (
             source == "group" and
-            group_id == environ['TalkID']):
+            event.source.group_id == environ['TalkID']):
 
         bot.push_message(environ['GroupMain'],
                          TextSendMessage(text))
@@ -108,7 +107,7 @@ def handle_message(event):
         reply(user_id)
 
     if text == "群組ID" and source == "group":
-        reply(group_id, 'check')
+        reply(event.source.group_id, 'check')
 
     # 管理指令們
     if user_id in owners:
@@ -137,7 +136,7 @@ def handle_message(event):
     if text_msg[0] == '貓':
         if state:
             return
-        isgroup = True if source == "group" and group_id in need_check else False
+        isgroup = True if source == "group" and event.source.group_id in need_check else False
         if len(text_msg > 1):
             quest_1 = database.correct(text_msg[1])
         msg_length = len(text_msg)
