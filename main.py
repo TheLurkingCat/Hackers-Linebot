@@ -154,7 +154,7 @@ def handle_message(event):
             elif quest_1 == '使用說明':
                 reply(user_guide)
 
-            elif quest_1 is 1:
+            elif quest_1 == '更新名單':
                 database.update_name_list()
             try:
                 reply(database.get_username(quest_1))

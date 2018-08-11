@@ -298,7 +298,8 @@ class Database(object):
                 {'_id': 0}, {'$set': {common_name: real_name}})
 
     def update_name_list(self):
-        self.collection.drop()
+        collection = self.db['nametest']
+        collection.drop()
 
         with open('client_secret.json', 'w') as f:
             f.write(environ['client_secret'])
@@ -324,7 +325,7 @@ class Database(object):
             else:
                 break
 
-        self.collection.insert_many(update_query)
+        collection.insert_many(update_query)
 
     def permission(self, key):
         return self.db.permission.find_one({"_id": 0})[key]
