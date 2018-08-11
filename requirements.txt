@@ -16,3 +16,4 @@ setuptools==40.0.0
 urllib3==1.23
 wheel==0.31.1
 pyxDamerauLevenshtein==1.5
+pygsheets==1.1.4

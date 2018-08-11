@@ -1,4 +1,3 @@
-from ast import literal_eval
 from os import environ
 
 from flask import Flask, abort, request
@@ -19,9 +18,11 @@ app = Flask(__name__)
 bot = LineBotApi(environ['ChannelAccessToken'])
 bot_reply = bot.reply_message
 handler = WebhookHandler(environ['ChannelSecret'])
-owners = set(literal_eval(environ['Owner']))
-editors = set(literal_eval(environ['Admins']))
-need_check = set(literal_eval(environ['Check']))
+database = Database()
+net = Net()
+owners = database.permission('owners')
+admins = database.permission('admins')
+need_check = database.permission('check')
 token = None
 input_str = ''
 isgroup = False
@@ -39,10 +40,6 @@ user_guide = TemplateSendMessage(
             MessageAction(
                 label='查名字',
                 text='貓 小貓貓'
-            ),
-            MessageAction(
-                label='查遊戲維基網址',
-                text='貓 光炮'
             ),
             MessageAction(
                 label='查遊戲內物品資料',
@@ -70,10 +67,6 @@ def reply(x, check=None):
         bot_reply(token, x)
 
 
-database = Database()
-net = Net()
-
-
 @app.route("/", methods=['POST'])
 def callback():
     """確認簽名正確後呼叫handler"""
@@ -98,24 +91,27 @@ def handle_message(event):
     """主控制器，沒什麼功能，類似一個switch去呼叫其他功能"""
 
     global token, input_str, isgroup, state
+    user_id = event.source.user_id
+    group_id = event.source.group_id
+    source = event.source.type
     text = event.message.text
     token = event.reply_token
     # 透過某個群組喊話
     if (
-            event.source.type == "group" and
-            event.source.group_id == environ['TalkID']):
+            source == "group" and
+            group_id == environ['TalkID']):
 
         bot.push_message(environ['GroupMain'],
                          TextSendMessage(text))
 
-    if text == "我的ID" and event.source.type == "user":
-        reply(event.source.user_id)
+    if text == "我的ID" and source == "user":
+        reply(user_id)
 
-    if text == "群組ID" and event.source.type == "group":
-        reply(event.source.group_id, 'check')
+    if text == "群組ID" and source == "group":
+        reply(group_id, 'check')
 
     # 管理指令們
-    if event.source.user_id in owners:
+    if user_id in owners:
         if text == '關機':
             state = True
         elif text == '開機':
@@ -141,47 +137,51 @@ def handle_message(event):
     if text_msg[0] == '貓':
         if state:
             return
-        isgroup = True if event.source.type == "group" and event.source.group_id in need_check else False
-        text_msg[1] = database.correct(text_msg[1])
+        isgroup = True if source == "group" and group_id in need_check else False
+        if len(text_msg > 1):
+            quest_1 = database.correct(text_msg[1])
         msg_length = len(text_msg)
         input_str = ' '.join(text_msg[1:])
         if msg_length == 2:
-            if text_msg[1] == '群規':
+            if quest_1 == '群規':
                 reply(database.get_rules())
 
-            elif text_msg[1] == '執法者':
+            elif quest_1 == '執法者':
                 reply(database.get_rules(-1))
 
-            elif database.is_wiki_page(text_msg[1]):
-                reply(net.get_uri(text_msg[1]))
+            elif database.is_wiki_page(quest_1):
+                reply(net.get_uri(quest_1))
 
-            elif text_msg[1] == '使用說明':
+            elif quest_1 == '使用說明':
                 reply(user_guide)
+
+            elif quest_1 is 1:
+                database.update_name_list()
             try:
-                reply(database.get_username(text_msg[1]))
+                reply(database.get_username(quest_1))
             except ValueError as e:
                 reply(str(e))
         elif msg_length == 3:
-            if text_msg[1] == '群規':
+            if quest_1 == '群規':
                 try:
                     reply(database.get_rules(int(text_msg[2])))
                 except ValueError:
                     pass
-            elif database.is_wiki_page(text_msg[1]):
-                reply(net.get_data(text_msg[1], int(text_msg[2])))
+            elif database.is_wiki_page(quest_1):
+                reply(net.get_data(quest_1, int(text_msg[2])))
 
         elif msg_length == 4:
-            if text_msg[3] == '圖片' and (event.source.type == "user" or event.source.user_id in editors):
+            if text_msg[3] == '圖片' and (source == "user" or user_id in owners):
                 try:
-                    reply(database.get_picture(text_msg[1], text_msg[2]))
+                    reply(database.get_picture(quest_1, text_msg[2]))
                 except ValueError as e:
                     reply(str(e))
-            elif text_msg[2] == '對應':
-                database.add_common_name(text_msg[1], text_msg[3])
+            elif text_msg[2] == '對應' and user_id in admins:
+                database.add_common_name(quest_1, text_msg[3])
         else:
             switch = ('計算時間', '計算經驗')
             try:
-                search_type = switch.index(text_msg[1])
+                search_type = switch.index(quest_1)
             except ValueError:
                 search_type = None
 
@@ -212,36 +212,36 @@ def handle_message(event):
                     day, hour = divmod(hour, 24)
                     reply('總共需要：{}天{}小時{}分鐘'.format(day, hour, minute))
 
-    elif text[0] == '貓' and event.source.user_id in editors:
-        # Deprecated(未來會偏向用Excel更新)
+    elif text[0] == '貓' and user_id in admins:
+        # Deprecated(未來會用Excel更新)
         text_msg = text.split(text[1])
         text_msg = [x for x in text_msg if x]
         msg_length = len(text_msg)
         if msg_length == 3:
             if text_msg[2] == '退群':
                 try:
-                    database.delete_name(text_msg[1])
+                    database.delete_name(quest_1)
                 except ValueError as e:
                     reply(str(e))
                 else:
-                    reply('成功刪除一筆資料')
+                    reply('成功刪除一筆資料\n棄用警告:此方法即將被取代，有問題請和作者聯繫')
 
         elif msg_length == 4:
-            if text_msg[1] == '新增資料':
+            if quest_1 == '新增資料':
                 try:
                     database.add_name(text_msg[2], text_msg[3])
                 except ValueError as e:
                     reply(str(e))
                 else:
-                    reply('成功新增一筆資料')
+                    reply('成功新增一筆資料\n棄用警告:此方法即將被取代，有問題請和作者聯繫')
 
-            elif text_msg[1] == '更新資料':
+            elif quest_1 == '更新資料':
                 try:
                     database.update_name(text_msg[2], text_msg[3])
                 except ValueError as e:
                     reply(str(e))
                 else:
-                    reply('成功更新一筆資料')
+                    reply('成功更新一筆資料\n棄用警告:此方法即將被取代，有問題請和作者聯繫')
 
 
 if __name__ == '__main__':

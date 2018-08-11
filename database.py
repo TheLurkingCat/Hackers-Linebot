@@ -5,6 +5,8 @@ from time import time
 
 import numpy
 from linebot.models.send_messages import ImageSendMessage
+from pandas import concat
+from pygsheets import authorize
 from pymongo import MongoClient
 
 from pyxdameraulevenshtein import normalized_damerau_levenshtein_distance
@@ -294,3 +296,35 @@ class Database(object):
         if common_name not in doc:
             collection.update_one(
                 {'_id': 0}, {'$set': {common_name: real_name}})
+
+    def update_name_list(self):
+        self.collection.drop()
+
+        with open('client_secret.json', 'w') as f:
+            f.write(environ['client_secret'])
+
+        update_query = []
+
+        gc = authorize(service_file=r'client_secret.json')
+
+        sheet = gc.open_by_url(
+            'https://docs.google.com/spreadsheets/d/1K8TjqjurniPnQoB8Zmca8EujmKRhNDMOHDaX7QggRV8')
+
+        worksheet = sheet.worksheet_by_title('name to ppl')
+
+        df = worksheet.get_as_df(has_header=False)
+        df = concat([df[2], df[4]], axis=1)
+        df.columns = ['gamename', 'linename']
+        df = df.loc[3:, :].iterrows()
+
+        for _, data in df:
+            temp = data.to_dict()
+            if temp['gamename'] or temp['linename']:
+                update_query.append(temp)
+            else:
+                break
+
+        self.collection.insert_many(update_query)
+
+    def permission(self, key):
+        return self.db.permission.find_one({"_id": 0})[key]
