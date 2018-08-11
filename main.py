@@ -154,7 +154,7 @@ def handle_message(event):
             elif quest_1 == '使用說明':
                 reply(user_guide)
 
-            elif quest_1 == '更新名單':
+            elif quest_1 == '更新名單' and user_id in admins:
                 database.update_name_list()
             try:
                 reply(database.get_username(quest_1))
@@ -218,29 +218,14 @@ def handle_message(event):
         msg_length = len(text_msg)
         if msg_length == 3:
             if text_msg[2] == '退群':
-                try:
-                    database.delete_name(quest_1)
-                except ValueError as e:
-                    reply(str(e))
-                else:
-                    reply('成功刪除一筆資料\n棄用警告:此方法即將被取代，有問題請和作者聯繫')
+                reply('棄用警告:此方法已被取代，請更新Excel然後使用:貓 更新名單')
 
         elif msg_length == 4:
             if quest_1 == '新增資料':
-                try:
-                    database.add_name(text_msg[2], text_msg[3])
-                except ValueError as e:
-                    reply(str(e))
-                else:
-                    reply('成功新增一筆資料\n棄用警告:此方法即將被取代，有問題請和作者聯繫')
+                reply('棄用警告:此方法已被取代，請更新Excel然後使用:貓 更新名單')
 
             elif quest_1 == '更新資料':
-                try:
-                    database.update_name(text_msg[2], text_msg[3])
-                except ValueError as e:
-                    reply(str(e))
-                else:
-                    reply('成功更新一筆資料\n棄用警告:此方法即將被取代，有問題請和作者聯繫')
+                reply('棄用警告:此方法已被取代，請更新Excel然後使用:貓 更新名單')
 
 
 if __name__ == '__main__':

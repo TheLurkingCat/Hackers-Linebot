@@ -50,56 +50,13 @@ class Database(object):
         self.UserPassword = environ['UserPassword']
         self.url = "mongodb://{}:{}@ds149743.mlab.com:49743/meow".format(
             self.UserID, self.UserPassword)
-        self.db = MongoClient(self.url)['meow']
-        self.collection = self.db['name']
-        time = self.db['time'].find_one({'_id': 0})
-        experience = self.db['time'].find_one({'_id': 1})
+        self.db = MongoClient(self.url).meow
+        self.collection = self.db.name
+        time = self.db.time.find_one({'_id': 0})
+        experience = self.db.time.find_one({'_id': 1})
         self.data_table = (time, experience)
         self.threshold = 18000
         self.pattern = compile(r'(.*){(.*)[$](.*)}(.*)')
-
-    def add_name(self, gamename, linename):
-        # Deprecated
-        """新增名字
-
-        參數:
-            gamename: 遊戲裡的名字
-            linename: line的名字
-        錯誤:
-            ValueError: 當查詢字串包含{$}時觸發
-        """
-        if self.pattern.findall(gamename) or self.pattern.findall(linename):
-            raise ValueError('嚴重的輸入錯誤，請聯繫作者或管理員')
-        self.collection.insert_one({"gamename": gamename,
-                                    "linename": linename})
-
-    def delete_name(self, gamename):
-        # Deprecated
-        """刪除名字
-
-        參數:
-            gamename: 遊戲裡的名字
-        錯誤:
-            ValueError: 當查詢字串包含{$}時觸發
-        """
-        if self.pattern.findall(gamename):
-            raise ValueError('嚴重的輸入錯誤，請聯繫作者或管理員')
-        self.collection.delete_many({'gamename': gamename})
-
-    def update_name(self, gamename, linename):
-        # Deprecated
-        """更新名字
-
-        參數:
-            gamename: 遊戲裡的名字
-            linename: line的名字
-        錯誤:
-            ValueError: 當查詢字串包含{$}時觸發
-        """
-        if self.pattern.findall(gamename) or self.pattern.findall(linename):
-            raise ValueError('嚴重的輸入錯誤，請聯繫作者或管理員')
-        self.collection.update_many({"gamename": gamename},
-                                    {"$set": {"linename": linename}})
 
     def get_username(self, name):
         """查詢此名字是否已被紀錄
@@ -147,7 +104,7 @@ class Database(object):
         index_name = name + str(level)
         if self.pattern.findall(index_name):
             raise ValueError('嚴重的輸入錯誤，請聯繫作者或管理員')
-        collection = self.db['pictures']
+        collection = self.db.pictures
         data = collection.find_one({'Name': index_name})
 
         if data is None and not program:
@@ -172,7 +129,7 @@ class Database(object):
         """
         if not isinstance(number, int):
             raise ValueError('嚴重的輸入錯誤，請聯繫作者或管理員')
-        collection = self.db['rules']
+        collection = self.db.rules
         temp = collection.find_one({'_id': number})
         if temp is None:
             return 'Error: Rule not found！'
@@ -187,7 +144,7 @@ class Database(object):
         回傳:
             如果有紀錄，就回傳正確的字，不然就回傳原來的字
         """
-        collection = self.db['correct']
+        collection = self.db.correct
         doc = collection.find_one({'_id': 0})
         try:
             return doc[word]
@@ -203,7 +160,7 @@ class Database(object):
             此頁面是否存在
         """
         if name:
-            collection = self.db['wiki']
+            collection = self.db.wiki
             document = collection.find_one({'_id': 0})
             return name in document['pages']
         return False
@@ -252,7 +209,7 @@ class Database(object):
             可不可以輸出
         """
         time_int = int(time())
-        collection = self.db['banned']
+        collection = self.db.banned
         temp = time_int - self.threshold
         collection.delete_many({"time": {"$lte": temp}})
         Taiwan_time = str(datetime.utcnow().replace(
@@ -266,7 +223,7 @@ class Database(object):
 
     def unlock(self):
         """解鎖全部被鎖定的文字"""
-        collection = self.db['banned']
+        collection = self.db.banned
         collection.drop()
 
     def get_banned_list(self):
@@ -277,7 +234,7 @@ class Database(object):
         """
         time_int = int(time())
         temp = time_int - self.threshold
-        collection = self.db['banned']
+        collection = self.db.banned
         collection.delete_many({"time": {"$lte": temp}})
         output = []
         for documents in collection.find():
@@ -292,18 +249,20 @@ class Database(object):
             common_name: 常輸錯的字串
             real_name: 正確字串
         """
-        collection = self.db['correct']
+        collection = self.db.correct
         doc = collection.find_one({'_id': 0})
         if common_name not in doc:
             collection.update_one(
                 {'_id': 0}, {'$set': {common_name: real_name}})
 
     def update_name_list(self):
+        """一次更新全部使用者遊戲和line名字"""
+
         auth = self.db.Authkey.find_one({"_id": 0})
 
-        collection = self.db['nametest']
-        collection.drop()
+        self.collection.drop()
 
+        # 避免密鑰一起被記錄，所以放在遠端，需要時生成
         with open('client_secret.json', 'w') as f:
             f.write(dumps(auth))
 
@@ -328,7 +287,14 @@ class Database(object):
             else:
                 break
 
-        collection.insert_many(update_query)
+        self.collection.insert_many(update_query)
 
     def permission(self, key):
+        """取得不同管理等級的UID名單
+
+        參數:
+            key: 管理等級
+        回傳:
+            對應的UID列表
+        """
         return self.db.permission.find_one({"_id": 0})[key]
