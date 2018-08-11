@@ -302,7 +302,7 @@ class Database(object):
         collection.drop()
 
         with open('client_secret.json', 'w') as f:
-            f.write(environ['client_secret'])
+            f.write(environ['client_secret'].replace('$', '"'))
 
         update_query = []
 
