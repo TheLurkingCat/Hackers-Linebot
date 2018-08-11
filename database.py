@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from json import dumps
 from os import environ
 from re import compile
 from time import time
@@ -298,11 +299,13 @@ class Database(object):
                 {'_id': 0}, {'$set': {common_name: real_name}})
 
     def update_name_list(self):
+        auth = self.db.Authkey.find_one({"_id": 0})
+
         collection = self.db['nametest']
         collection.drop()
 
         with open('client_secret.json', 'w') as f:
-            f.write(environ['client_secret'].replace('$', '"'))
+            f.write(dumps(auth))
 
         update_query = []
 
