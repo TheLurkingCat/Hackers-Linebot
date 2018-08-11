@@ -137,7 +137,7 @@ def handle_message(event):
         if state:
             return
         isgroup = True if source == "group" and event.source.group_id in need_check else False
-        if len(text_msg > 1):
+        if len(text_msg) > 1:
             quest_1 = database.correct(text_msg[1])
         msg_length = len(text_msg)
         input_str = ' '.join(text_msg[1:])
