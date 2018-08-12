@@ -55,7 +55,7 @@ user_guide = TemplateSendMessage(
 
 
 def reply(x, check=None):
-    """回復使用者，但是會先檢查"""
+    """回覆使用者，但是會先檢查"""
     if not isinstance(x, SendMessage):
         if x:
             # 如果在群組內發言而且沒有免檢查特權就檢查他
@@ -155,7 +155,7 @@ def handle_message(event):
                 reply(user_guide)
 
             elif quest_1 == '更新名單' and user_id in admins:
-                database.update_name_list()
+                reply('更新後有{}筆資料'.format(database.update_name()))
             try:
                 reply(database.get_username(quest_1))
             except ValueError as e:
@@ -210,22 +210,6 @@ def handle_message(event):
                     hour, minute = divmod(total, 60)
                     day, hour = divmod(hour, 24)
                     reply('總共需要：{}天{}小時{}分鐘'.format(day, hour, minute))
-
-    elif text[0] == '貓' and user_id in admins:
-        # Deprecated(未來會用Excel更新)
-        text_msg = text.split(text[1])
-        text_msg = [x for x in text_msg if x]
-        msg_length = len(text_msg)
-        if msg_length == 3:
-            if text_msg[2] == '退群':
-                reply('棄用警告:此方法已被取代，請更新Excel然後使用:貓 更新名單')
-
-        elif msg_length == 4:
-            if quest_1 == '新增資料':
-                reply('棄用警告:此方法已被取代，請更新Excel然後使用:貓 更新名單')
-
-            elif quest_1 == '更新資料':
-                reply('棄用警告:此方法已被取代，請更新Excel然後使用:貓 更新名單')
 
 
 if __name__ == '__main__':

@@ -255,8 +255,12 @@ class Database(object):
             collection.update_one(
                 {'_id': 0}, {'$set': {common_name: real_name}})
 
-    def update_name_list(self):
-        """一次更新全部使用者遊戲和line名字"""
+    def update_name(self):
+        """一次更新全部使用者遊戲和line名字
+
+        回傳:
+            目前資料數
+        """
 
         auth = self.db.Authkey.find_one({"_id": 0})
 
@@ -287,7 +291,8 @@ class Database(object):
             else:
                 break
 
-        self.collection.insert_many(update_query)
+        result = self.collection.insert_many(update_query)
+        return len(result.inserted_ids)
 
     def permission(self, key):
         """取得不同管理等級的UID名單
