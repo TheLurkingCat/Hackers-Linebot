@@ -292,7 +292,7 @@ class Database(object):
                 update_query.append(temp)
             else:
                 break
-
+        update_query.append({'gamename': 'Meow', 'linename': '小貓貓'})
         result = self.collection.insert_many(update_query)
         return len(result.inserted_ids)
 
