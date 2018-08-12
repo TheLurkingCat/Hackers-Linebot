@@ -51,7 +51,7 @@ class Database(object):
         self.url = "mongodb://{}:{}@ds149743.mlab.com:49743/meow".format(
             self.UserID, self.UserPassword)
         self.db = MongoClient(self.url).meow
-        self.collection = self.db.name
+        self.collection = self.db['name']
         time = self.db.time.find_one({'_id': 0})
         experience = self.db.time.find_one({'_id': 1})
         self.data_table = (time, experience)
