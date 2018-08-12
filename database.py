@@ -263,7 +263,7 @@ class Database(object):
         """
 
         auth = self.db.Authkey.find_one({"_id": 0})
-        print(self.collection)
+
         self.collection.drop()
 
         # 避免密鑰一起被記錄，所以放在遠端，需要時生成
@@ -282,6 +282,8 @@ class Database(object):
         df = worksheet.get_as_df(has_header=False)
         df = concat([df[2], df[4]], axis=1)
         df.columns = ['gamename', 'linename']
+        df['gamename'] = df['gamename'].astype('str')
+        df['linename'] = df['linename'].astype('str')
         df = df.loc[3:, :].iterrows()
 
         for _, data in df:

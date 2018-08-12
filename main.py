@@ -27,6 +27,8 @@ token = None
 input_str = ''
 isgroup = False
 state = False
+group_id = None
+user_id_reply = None
 
 user_guide = TemplateSendMessage(
     alt_text='電腦版無法顯示按紐，按鈕功能只是舉例，實際使用上請自行替換\n查群規: 貓 群規\n查名字: 貓 小貓貓\n查遊戲維基網址: 貓 光炮\n查遊戲內物品資料: 貓 光炮 21',
@@ -56,13 +58,21 @@ user_guide = TemplateSendMessage(
 
 def reply(x, check=None):
     """回覆使用者，但是會先檢查"""
+    global group_id, user_id
     if not isinstance(x, SendMessage):
         if x:
             # 如果在群組內發言而且沒有免檢查特權就檢查他
             if (check is not None or isgroup) and database.anti_spam(input_str, x):
                 return
             x = TextSendMessage(x)
-            bot_reply(token, x)
+            try:
+                bot_reply(token, x)
+            except LineBotApiError as e:
+                if "Invalid reply token" in str(e):
+                    if group_id is None:
+                        bot.push_message(user_id, x)
+                    else:
+                        bot.push_message(group_id, x)
     else:
         bot_reply(token, x)
 
@@ -90,15 +100,17 @@ def callback():
 def handle_message(event):
     """主控制器，沒什麼功能，類似一個switch去呼叫其他功能"""
 
-    global token, input_str, isgroup, state
+    global token, input_str, isgroup, state, group_id, user_id
     user_id = event.source.user_id
     source = event.source.type
     text = event.message.text
     token = event.reply_token
+    if source == "group":
+        group_id = event.source.group_id
     # 透過某個群組喊話
     if (
             source == "group" and
-            event.source.group_id == environ['TalkID']):
+            group_id == environ['TalkID']):
 
         bot.push_message(environ['GroupMain'],
                          TextSendMessage(text))
@@ -107,7 +119,7 @@ def handle_message(event):
         reply(user_id)
 
     if text == "群組ID" and source == "group":
-        reply(event.source.group_id, 'check')
+        reply(group_id, 'check')
 
     # 管理指令們
     if user_id in owners:
@@ -136,7 +148,7 @@ def handle_message(event):
     if text_msg[0] == '貓':
         if state:
             return
-        isgroup = True if source == "group" and event.source.group_id in need_check else False
+        isgroup = True if source == "group" and group_id in need_check else False
         if len(text_msg) > 1:
             quest_1 = database.correct(text_msg[1])
         msg_length = len(text_msg)
