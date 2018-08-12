@@ -263,7 +263,7 @@ class Database(object):
         """
 
         auth = self.db.Authkey.find_one({"_id": 0})
-
+        print(self.collection)
         self.collection.drop()
 
         # 避免密鑰一起被記錄，所以放在遠端，需要時生成
