@@ -294,7 +294,7 @@ class Database(object):
                 break
         update_query.append({'gamename': 'Meow', 'linename': '小貓貓'})
         result = self.collection.insert_many(update_query)
-        return len(result.inserted_ids)
+        return len(result.inserted_ids) - 1
 
     def permission(self, key):
         """取得不同管理等級的UID名單

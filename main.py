@@ -105,6 +105,9 @@ def handle_message(event):
     source = event.source.type
     text = event.message.text
     token = event.reply_token
+    easy_switch = {'貓 群規': database.get_rules(
+    ), "貓 執法者": database.get_rules(-1), "貓 使用說明": user_guide}
+
     if source == "group":
         group_id = event.source.group_id
     # 透過某個群組喊話
@@ -135,7 +138,7 @@ def handle_message(event):
             bot_reply(token, x)
 
     # 連連看伺服器看看他有沒有活著
-    if text == 'Selftest':
+    if text == 'Selftest' and user_id in owners:
         t = post('https://little-cat.herokuapp.com/').status_code
         if t == 401:
             reply('喵喵喵！')
@@ -144,7 +147,11 @@ def handle_message(event):
         else:
             reply(str(t))
 
+    if text in easy_switch:
+        reply(easy_switch[text])
+
     text_msg = text.split()
+
     if text_msg[0] == '貓':
         if state:
             return
@@ -154,24 +161,15 @@ def handle_message(event):
         msg_length = len(text_msg)
         input_str = ' '.join(text_msg[1:])
         if msg_length == 2:
-            if quest_1 == '群規':
-                reply(database.get_rules())
-
-            elif quest_1 == '執法者':
-                reply(database.get_rules(-1))
-
-            elif database.is_wiki_page(quest_1):
+            if database.is_wiki_page(quest_1):
                 reply(net.get_uri(quest_1))
-
-            elif quest_1 == '使用說明':
-                reply(user_guide)
-
             elif quest_1 == '更新名單' and user_id in admins:
                 reply('更新後有{}筆資料'.format(database.update_name()))
             try:
                 reply(database.get_username(quest_1))
             except ValueError as e:
                 reply(str(e))
+
         elif msg_length == 3:
             if quest_1 == '群規':
                 try:
