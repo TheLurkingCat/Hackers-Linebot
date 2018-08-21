@@ -206,7 +206,7 @@ class Database(object):
         參數:
             x: 原本使用者輸入的字串
         回傳:
-            可不可以輸出
+            是否禁止回覆
         """
         time_int = int(time())
         collection = self.db.banned
@@ -216,10 +216,10 @@ class Database(object):
             microsecond=0) + timedelta(hours=8))
         for document in collection.find():
             if is_similar(x, document['input'], 0.5):
-                return False
+                return True
         collection.insert_one(
             {"time": time_int, "time_string": Taiwan_time, "input": x})
-        return True
+        return False
 
     def unlock(self):
         """解鎖全部被鎖定的文字"""

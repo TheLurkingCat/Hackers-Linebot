@@ -60,7 +60,7 @@ def reply(x, check=None):
     global group_id, user_id
 
     # 如果在群組內發言而且沒有免檢查特權就檢查他
-    if not ((not isgroup and check is None) or database.anti_spam(input_str)):
+    if isgroup and database.anti_spam(input_str) and check is None:
         return
     if not isinstance(x, SendMessage):
         if x:
