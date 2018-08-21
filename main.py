@@ -24,7 +24,7 @@ owners = database.permission('owners')
 admins = database.permission('admins')
 need_check = database.permission('check')
 token = None
-input_str = ''
+text = ''
 isgroup = False
 state = False
 group_id = None
@@ -63,7 +63,7 @@ def reply(x, check=None):
 
     if not isinstance(x, SendMessage):
         if x:
-            if isgroup and database.anti_spam(input_str, x) and check is None:
+            if isgroup and database.anti_spam(text, x) and check is None:
                 return
             x = TextSendMessage(x)
             try:
@@ -75,7 +75,7 @@ def reply(x, check=None):
                     else:
                         bot.push_message(group_id, x)
     else:
-        if isgroup and database.anti_spam(input_str, input_str) and check is None:
+        if isgroup and database.anti_spam(text, text) and check is None:
             return
         bot_reply(token, x)
 
@@ -103,7 +103,7 @@ def callback():
 def handle_message(event):
     """主控制器，沒什麼功能，類似一個switch去呼叫其他功能"""
 
-    global token, input_str, isgroup, state, group_id, user_id
+    global token, isgroup, state, group_id, user_id, text
     user_id = event.source.user_id
     source = event.source.type
     text = event.message.text
@@ -162,7 +162,6 @@ def handle_message(event):
         if len(text_msg) > 1:
             quest_1 = database.correct(text_msg[1])
         msg_length = len(text_msg)
-        input_str = ' '.join(text_msg[1:])
         if msg_length == 2:
             if database.is_wiki_page(quest_1):
                 reply(net.get_uri(quest_1))
