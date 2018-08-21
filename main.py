@@ -60,10 +60,11 @@ def reply(x, check=None):
     global group_id, user_id
 
     # 如果在群組內發言而且沒有免檢查特權就檢查他
-    if isgroup and database.anti_spam(input_str) and check is None:
-        return
+
     if not isinstance(x, SendMessage):
         if x:
+            if isgroup and database.anti_spam(input_str, x) and check is None:
+                return
             x = TextSendMessage(x)
             try:
                 bot_reply(token, x)
@@ -74,6 +75,8 @@ def reply(x, check=None):
                     else:
                         bot.push_message(group_id, x)
     else:
+        if isgroup and database.anti_spam(input_str, input_str) and check is None:
+            return
         bot_reply(token, x)
 
 

@@ -200,11 +200,12 @@ class Database(object):
         total *= number
         return total
 
-    def anti_spam(self, x):
+    def anti_spam(self, x, y):
         """避免有人惡意洗版
 
         參數:
             x: 原本使用者輸入的字串
+            y: 預期輸出字串或代號
         回傳:
             是否禁止回覆
         """
@@ -215,10 +216,10 @@ class Database(object):
         Taiwan_time = str(datetime.utcnow().replace(
             microsecond=0) + timedelta(hours=8))
         for document in collection.find():
-            if is_similar(x, document['input'], 0.1):
+            if document['output'] == y and is_similar(x, document['input'], 0.75):
                 return True
         collection.insert_one(
-            {"time": time_int, "time_string": Taiwan_time, "input": x})
+            {"time": time_int, "time_string": Taiwan_time, "input": x, 'output': y})
         return False
 
     def unlock(self):
