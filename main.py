@@ -28,7 +28,6 @@ input_str = ''
 isgroup = False
 state = False
 group_id = None
-user_id_reply = None
 
 user_guide = TemplateSendMessage(
     alt_text='電腦版無法顯示按紐，按鈕功能只是舉例，實際使用上請自行替換\n查群規: 貓 群規\n查名字: 貓 小貓貓\n查遊戲維基網址: 貓 光炮\n查遊戲內物品資料: 貓 光炮 21',
@@ -59,11 +58,12 @@ user_guide = TemplateSendMessage(
 def reply(x, check=None):
     """回覆使用者，但是會先檢查"""
     global group_id, user_id
+
+    # 如果在群組內發言而且沒有免檢查特權就檢查他
+    if not ((not isgroup and check is None) or database.anti_spam(input_str)):
+        return
     if not isinstance(x, SendMessage):
         if x:
-            # 如果在群組內發言而且沒有免檢查特權就檢查他
-            if (check is not None or isgroup) and database.anti_spam(input_str, x):
-                return
             x = TextSendMessage(x)
             try:
                 bot_reply(token, x)

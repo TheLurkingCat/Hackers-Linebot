@@ -44,12 +44,13 @@ class Database(object):
         pattern: 用來過濾惡意請求的正則表達式
     """
 
-    def __init__(self):
+    def __init__(self, UserID=None, UserPassword=None):
         """初始化MongoDB的連線"""
-        self.UserID = environ['UserID']
-        self.UserPassword = environ['UserPassword']
+        if UserID is None:
+            UserID = environ['UserID']
+            UserPassword = environ['UserPassword']
         self.url = "mongodb://{}:{}@ds149743.mlab.com:49743/meow".format(
-            self.UserID, self.UserPassword)
+            UserID, UserPassword)
         self.db = MongoClient(self.url).meow
         self.collection = self.db['name']
         time = self.db.time.find_one({'_id': 0})
@@ -199,12 +200,11 @@ class Database(object):
         total *= number
         return total
 
-    def anti_spam(self, x, y):
+    def anti_spam(self, x):
         """避免有人惡意洗版
 
         參數:
             x: 原本使用者輸入的字串
-            y: 準備輸出的內容
         回傳:
             可不可以輸出
         """
@@ -214,12 +214,12 @@ class Database(object):
         collection.delete_many({"time": {"$lte": temp}})
         Taiwan_time = str(datetime.utcnow().replace(
             microsecond=0) + timedelta(hours=8))
-        for documents in collection.find():
-            if is_similar(x, documents['input'], 0.75) and y == documents['output']:
-                return True
+        for document in collection.find():
+            if is_similar(x, document['input'], 0.5):
+                return False
         collection.insert_one(
-            {"time": time_int, "time_string": Taiwan_time, "input": x, "output": y})
-        return False
+            {"time": time_int, "time_string": Taiwan_time, "input": x})
+        return True
 
     def unlock(self):
         """解鎖全部被鎖定的文字"""
