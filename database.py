@@ -215,7 +215,7 @@ class Database(object):
         Taiwan_time = str(datetime.utcnow().replace(
             microsecond=0) + timedelta(hours=8))
         for document in collection.find():
-            if is_similar(x, document['input'], 0.5):
+            if is_similar(x, document['input'], 0.1):
                 return True
         collection.insert_one(
             {"time": time_int, "time_string": Taiwan_time, "input": x})
