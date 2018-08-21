@@ -125,7 +125,7 @@ def handle_message(event):
         reply(user_id)
 
     if text == "群組ID" and source == "group":
-        reply(group_id, 'check')
+        reply(group_id, 'nocheck')
 
     # 管理指令們
     if user_id in owners:
@@ -141,14 +141,14 @@ def handle_message(event):
             bot_reply(token, x)
 
     # 連連看伺服器看看他有沒有活著
-    if text == 'Selftest' and user_id in owners:
+    if text == '連線測試' and user_id in owners:
         t = post('https://little-cat.herokuapp.com/').status_code
         if t == 401:
-            reply('喵喵喵！')
+            reply('喵喵喵！', 'nocheck')
         elif t == 500:
-            reply('蹦蹦蹦！')
+            reply('蹦蹦蹦！', 'nocheck')
         else:
-            reply(str(t))
+            reply(str(t), 'nocheck')
 
     if text in easy_switch:
         reply(easy_switch[text])

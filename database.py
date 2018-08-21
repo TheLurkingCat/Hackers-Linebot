@@ -239,8 +239,8 @@ class Database(object):
         collection.delete_many({"time": {"$lte": temp}})
         output = []
         for documents in collection.find():
-            output.append('{} banned at {}'.format(
-                documents['input'], documents['time_string']))
+            output.append('{} 於 {} 鎖定'.format(
+                documents['input'][2:], documents['time_string']))
         return '\n'.join(output)
 
     def add_common_name(self, common_name, real_name):
