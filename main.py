@@ -124,17 +124,16 @@ def handle_message(event):
     if text == "我的ID" and source == "user":
         reply(user_id)
 
-    if text == "群組ID" and source == "group":
-        reply(group_id, 'nocheck')
-
     # 管理指令們
-    if user_id in owners or group_id == environ['GroupManage']:
+    if user_id in admins or group_id == environ['GroupManage']:
         if text == '關機':
             state = True
         elif text == '開機':
             state = False
         elif text == '解鎖':
             database.unlock()
+        elif text == "群組ID" and source == "group":
+            reply(group_id, 'nocheck')
         elif text == '封鎖清單':
             x = database.get_banned_list()
             x = TextSendMessage(x if x else 'None')
@@ -165,7 +164,7 @@ def handle_message(event):
         if msg_length == 2:
             if database.is_wiki_page(quest_1):
                 reply(net.get_uri(quest_1))
-            elif quest_1 == '更新名單' and user_id in admins:
+            elif quest_1 == '更新名單' and (user_id in admins or group_id == environ['GroupManage']):
                 reply('更新後有{}筆資料'.format(database.update_name()))
             try:
                 reply(database.get_username(quest_1))
@@ -187,7 +186,7 @@ def handle_message(event):
                     reply(database.get_picture(quest_1, text_msg[2]))
                 except ValueError as e:
                     reply(str(e))
-            elif text_msg[2] == '對應' and user_id in admins:
+            elif text_msg[2] == '對應' and (user_id in admins or group_id == environ['GroupManage']):
                 database.add_common_name(quest_1, text_msg[3])
         else:
             switch = ('計算時間', '計算經驗')

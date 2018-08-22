@@ -5,14 +5,14 @@ html5lib==1.0.1
 idna==2.7
 line-bot-sdk==1.8.0
 lxml==4.2.4
-numpy==1.15.0
+numpy==1.15.1
 pandas==0.23.4
 pip==18.0
 pymongo==3.7.1
 python-dateutil==2.7.3
 pytz==2018.5
 requests==2.19.1
-setuptools==40.1.0
+setuptools==40.2.0
 urllib3==1.23
 wheel==0.31.1
 pyxDamerauLevenshtein==1.5
