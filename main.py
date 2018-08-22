@@ -128,7 +128,7 @@ def handle_message(event):
         reply(group_id, 'nocheck')
 
     # 管理指令們
-    if user_id in owners or group_id == environ['GroupMain']:
+    if user_id in owners or group_id == environ['GroupManage']:
         if text == '關機':
             state = True
         elif text == '開機':
