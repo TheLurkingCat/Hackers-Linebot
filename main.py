@@ -113,6 +113,8 @@ def handle_message(event):
 
     if source == "group":
         group_id = event.source.group_id
+    else:
+        group_id = None
     # 透過某個群組喊話
     if (
             source == "group" and
