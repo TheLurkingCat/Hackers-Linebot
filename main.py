@@ -111,10 +111,8 @@ def handle_message(event):
     easy_switch = {'貓 群規': database.get_rules(
     ), "貓 執法者": database.get_rules(-1), "貓 使用說明": user_guide}
 
-    if source == "group":
-        group_id = event.source.group_id
-    else:
-        group_id = None
+    group_id = event.source.group_id if source == "group" else None
+
     # 透過某個群組喊話
     if (
             source == "group" and
