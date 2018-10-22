@@ -1,10 +1,12 @@
+"""
+處理資料庫相關操作的模組
+"""
+import re
 from datetime import datetime, timedelta
 from json import dumps
 from os import environ
-from re import compile
 from time import time
 
-import numpy
 from linebot.models.send_messages import ImageSendMessage
 from pandas import concat
 from pygsheets import authorize
@@ -53,11 +55,10 @@ class Database(object):
             UserID, UserPassword)
         self.db = MongoClient(self.url).meow
         self.collection = self.db['name']
-        time = self.db.time.find_one({'_id': 0})
         experience = self.db.time.find_one({'_id': 1})
-        self.data_table = (time, experience)
+        self.data_table = (self.db.time.find_one({'_id': 0}), experience)
         self.threshold = 18000
-        self.pattern = compile(r'(.*){(.*)[$](.*)}(.*)')
+        self.pattern = re.compile(r'(.*){(.*)[$](.*)}(.*)')
 
     def get_username(self, name):
         """查詢此名字是否已被紀錄
@@ -166,7 +167,7 @@ class Database(object):
             return name in document['pages']
         return False
 
-    def get_time_exp(self, title, number, level1, level2, n, i):
+    def get_time_exp(self, title, number, level1, level2, search_type, line_now):
         """取得從level1升級到level2要花多少時間或經驗
 
         參數:
@@ -174,33 +175,33 @@ class Database(object):
             number: 有幾個東西要升級
             level1: 這東西的當前等級
             level2: 看你想升到幾級
-            n: 0 代表時間 1 代表經驗
-            i: 目前在第幾行，記錄錯誤用
+            search_type: 0 代表時間 1 代表經驗
+            line_now: 目前在第幾行，記錄錯誤用
         回傳:
             要升多久，單位是分鐘
         錯誤:
             ValueError: 輸入資料明顯錯誤時觸發
         """
         if not self.is_wiki_page(title):
-            raise ValueError('第{}行錯誤: {}找不到！'.format(i, title))
+            raise ValueError('第{}行錯誤: {}找不到！'.format(line_now, title))
 
         if int(level1) > int(level2):
             raise ValueError(
-                '第{}行錯誤: 原來的等級{}大於後來的等級{}！'.format(i, level1, level2))
+                '第{}行錯誤: 原來的等級{}大於後來的等級{}！'.format(line_now, level1, level2))
 
         threshold = 10
 
         if number > threshold:
-            raise ValueError('第{}行錯誤: 數量超過上限，沒有那麼多{}！'.format(i, title))
+            raise ValueError('第{}行錯誤: 數量超過上限，沒有那麼多{}！'.format(line_now, title))
         try:
-            total = self.data_table[n][title][level2]
-            total -= self.data_table[n][title][level1]
+            total = self.data_table[search_type][title][level2]
+            total -= self.data_table[search_type][title][level1]
         except KeyError:
-            raise ValueError('第{}行錯誤: 資料不正確！'.format(i))
+            raise ValueError('第{}行錯誤: 資料不正確！'.format(line_now))
         total *= number
         return total
 
-    def anti_spam(self, x, y):
+    def anti_spam(self, user_input, output):
         """避免有人惡意洗版
 
         參數:
@@ -216,10 +217,10 @@ class Database(object):
         Taiwan_time = str(datetime.utcnow().replace(
             microsecond=0) + timedelta(hours=8))
         for document in collection.find():
-            if document['output'] == y and is_similar(x, document['input'], 0.75):
+            if document['output'] == output and is_similar(user_input, document['input'], 0.75):
                 return True
         collection.insert_one(
-            {"time": time_int, "time_string": Taiwan_time, "input": x, 'output': y})
+            {"time": time_int, "time_string": Taiwan_time, "input": user_input, 'output': output})
         return False
 
     def unlock(self):
@@ -268,26 +269,26 @@ class Database(object):
         self.collection.drop()
 
         # 避免密鑰一起被記錄，所以放在遠端，需要時生成
-        with open('client_secret.json', 'w') as f:
-            f.write(dumps(auth))
+        with open('client_secret.json', 'w') as secret:
+            secret.write(dumps(auth))
 
         update_query = []
 
-        gc = authorize(service_file=r'client_secret.json')
+        google_client = authorize(service_file=r'client_secret.json')
 
-        sheet = gc.open_by_url(
+        sheet = google_client.open_by_url(
             'https://docs.google.com/spreadsheets/d/1K8TjqjurniPnQoB8Zmca8EujmKRhNDMOHDaX7QggRV8')
 
         worksheet = sheet.worksheet_by_title('name to ppl')
 
-        df = worksheet.get_as_df(has_header=False)
-        df = concat([df[2], df[4]], axis=1)
-        df.columns = ['gamename', 'linename']
-        df['gamename'] = df['gamename'].astype('str')
-        df['linename'] = df['linename'].astype('str')
-        df = df.loc[3:, :].iterrows()
+        dataframe = worksheet.get_as_dataframe(has_header=False)
+        dataframe = concat([dataframe[2], dataframe[4]], axis=1)
+        dataframe.columns = ['gamename', 'linename']
+        dataframe['gamename'] = dataframe['gamename'].astype('str')
+        dataframe['linename'] = dataframe['linename'].astype('str')
+        dataframe = dataframe.loc[3:, :].iterrows()
 
-        for _, data in df:
+        for _, data in dataframe:
             temp = data.to_dict()
             if temp['gamename'] or temp['linename']:
                 update_query.append(temp)

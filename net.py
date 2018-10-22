@@ -1,3 +1,6 @@
+"""
+這個模組主要處理網路爬蟲相關請求
+"""
 from urllib.parse import quote
 
 from pandas import read_html
@@ -7,14 +10,14 @@ class Net(object):
     """控制爬蟲引擎
     屬性:
         url: 維基最基本的網址
-        TC: 需要在後面加上 '(TC)' 才能正確識別的集合
+        traditional_chinese: 需要在後面加上 '(TC)' 才能正確識別的集合
         column_one_name: 資料第一欄(column)的名稱
     """
 
     def __init__(self):
         """基本參數"""
         self.url = "http://hackersthegame.wikia.com/wiki/"
-        self.TC = set(["幻影", "核心", "入侵", "入侵策略"])
+        self.traditional_chinese = set(["幻影", "核心", "入侵", "入侵策略"])
         self.column_one_name = set(['節點等級', '等級'])
 
     def get_data(self, title, level):
@@ -58,6 +61,6 @@ class Net(object):
         """
         url = '{}{}'.format(self.url, quote(title, safe=''))
 
-        if title in self.TC:
+        if title in self.traditional_chinese:
             return "{}%28TC%29".format(url)
         return url
