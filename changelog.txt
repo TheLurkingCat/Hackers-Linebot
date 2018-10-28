@@ -1,3 +1,7 @@
+Version: 3.2.0
+
+搬遷資料庫至Mongodb Atlas
+
 Version: 3.1.0
 
 更友善的介面、新的名單更新方式

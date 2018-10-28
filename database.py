@@ -51,7 +51,7 @@ class Database(object):
         if UserID is None:
             UserID = environ['UserID']
             UserPassword = environ['UserPassword']
-        self.url = "mongodb://{}:{}@ds149743.mlab.com:49743/meow".format(
+        self.url = "mongodb+srv://{}:{}@meow-jzx99.mongodb.net/meow?retryWrites=true".format(
             UserID, UserPassword)
         self.db = MongoClient(self.url).meow
         self.collection = self.db['name']
