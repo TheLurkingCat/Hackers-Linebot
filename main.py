@@ -114,6 +114,7 @@ def handle_message(event):
     Variables.source = event.source.type
     Variables.text = event.message.text
     Variables.token = event.reply_token
+    is_offline = False
     easy_switch = {'貓 群規': Variables.database.get_rules(
     ), "貓 執法者": Variables.database.get_rules(-1), "貓 使用說明": Variables.user_guide}
 
@@ -133,9 +134,9 @@ def handle_message(event):
     # 管理指令們
     if Variables.user_id in Variables.admins or Variables.group_id == environ['GroupManage']:
         if Variables.text == '關機':
-            state = True
+            is_offline = True
         elif Variables.text == '開機':
-            state = False
+            is_offline = False
         elif Variables.text == '解鎖':
             Variables.database.unlock()
         elif Variables.text == "群組ID" and Variables.source == "group":
@@ -161,7 +162,7 @@ def handle_message(event):
     text_msg = Variables.text.split()
 
     if text_msg[0] == '貓':
-        if state:
+        if is_offline:
             return
         Variables.isgroup = True if Variables.source == "group" and Variables.group_id in Variables.need_check else False
         if len(text_msg) > 1:
