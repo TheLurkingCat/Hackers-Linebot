@@ -8,7 +8,7 @@ from os import environ
 from time import time
 
 from linebot.models.send_messages import ImageSendMessage
-from pandas import concat
+from pandas import DataFrame, concat
 from pygsheets import authorize
 from pymongo import MongoClient
 
@@ -266,8 +266,6 @@ class Database(object):
 
         auth = self.db.Authkey.find_one({"_id": 0})
 
-        self.collection.drop()
-
         # 避免密鑰一起被記錄，所以放在遠端，需要時生成
         with open('client_secret.json', 'w') as secret:
             secret.write(dumps(auth))
@@ -281,7 +279,7 @@ class Database(object):
 
         worksheet = sheet.worksheet_by_title('name to ppl')
 
-        dataframe = worksheet.get_as_dataframe(has_header=False)
+        dataframe = DataFrame(list(worksheet))
         dataframe = concat([dataframe[2], dataframe[4]], axis=1)
         dataframe.columns = ['gamename', 'linename']
         dataframe['gamename'] = dataframe['gamename'].astype('str')
@@ -295,6 +293,7 @@ class Database(object):
             else:
                 break
         update_query.append({'gamename': 'Meow', 'linename': '小貓貓'})
+        self.collection.drop()
         result = self.collection.insert_many(update_query)
         return len(result.inserted_ids) - 1
 
