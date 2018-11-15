@@ -28,6 +28,7 @@ class Variables(object):
     owners = database.permission('owners')
     admins = database.permission('admins')
     need_check = database.permission('check')
+    no_check = database.permission('no_check')
     token = None
     text = ''
     isgroup = False
@@ -64,10 +65,11 @@ class Variables(object):
     )
 
 
-def reply(output, check=None):
+def reply(output):
     """回覆使用者，但是會先檢查"""
-
     # 如果在群組內發言而且沒有免檢查特權就檢查他
+    check = 'nocheck' if Variables.user_id in Variables.no_check else None
+
     if not isinstance(output, SendMessage):
         if output:
             if Variables.isgroup and Variables.database.anti_spam(Variables.text, output) and check is None:
@@ -140,7 +142,7 @@ def handle_message(event):
         elif Variables.text == '解鎖':
             Variables.database.unlock()
         elif Variables.text == "群組ID" and Variables.source == "group":
-            reply(Variables.group_id, 'nocheck')
+            reply(Variables.group_id)
         elif Variables.text == '封鎖清單':
             banned = Variables.database.get_banned_list()
             output = TextSendMessage(banned if banned else 'None')
@@ -150,11 +152,11 @@ def handle_message(event):
     if Variables.text == '連線測試' and Variables.user_id in Variables.owners:
         state = post('https://little-cat.herokuapp.com/').status_code
         if state == 401:
-            reply('喵喵喵！', 'nocheck')
+            reply('喵喵喵！')
         elif state == 500:
-            reply('蹦蹦蹦！', 'nocheck')
+            reply('蹦蹦蹦！')
         else:
-            reply(str(state), 'nocheck')
+            reply(str(state))
 
     if Variables.text in easy_switch:
         reply(easy_switch[Variables.text])
