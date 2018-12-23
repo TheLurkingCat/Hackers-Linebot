@@ -243,7 +243,7 @@ def handle_message(event):
         Variables.count += 1
         with open("text.txt", "a") as f:
             print(",".join(words), file=f)
-        if Variables.count > 10:
+        if Variables.count > 50:
             Variables.database.save_chat_log()
             Variables.count = 0
 
