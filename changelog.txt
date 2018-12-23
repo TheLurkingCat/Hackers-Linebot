@@ -1,3 +1,7 @@
+Version: 3.3.0
+
+新增紀錄功能
+
 Version: 3.2.0
 
 搬遷資料庫至Mongodb Atlas
