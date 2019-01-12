@@ -149,9 +149,10 @@ def handle_message(event):
 
     text_msg = text.split()
 
+    if is_offline:
+        return
+
     if text_msg[0] == '貓':
-        if is_offline:
-            return
         if len(text_msg) > 1:
             quest_1 = database.correct(text_msg[1])
         msg_length = len(text_msg)
