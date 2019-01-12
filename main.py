@@ -214,6 +214,11 @@ def handle_message(event):
                     except ValueError as error:
                         print(tofind)
                         reply(str(error), event)
+                    if i > 50:
+                        print(tofind)
+                        reply("Error?", event)
+                        return
+
                 if search_type:
                     reply('總共獲得：{} 經驗'.format(total), event)
                 else:
