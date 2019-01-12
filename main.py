@@ -1,9 +1,6 @@
 from os import environ
-from re import sub
 
 from flask import Flask, abort, request
-from jieba import set_dictionary
-from jieba.analyse import extract_tags
 from linebot.api import LineBotApi
 from linebot.exceptions import InvalidSignatureError, LineBotApiError
 from linebot.models.actions import MessageAction
@@ -16,8 +13,6 @@ from requests import post
 
 from database import Database
 from net import Net
-
-set_dictionary("dict.txt.big")
 
 
 class Variables(object):
@@ -83,12 +78,8 @@ def reply(output):
             output = TextSendMessage(output)
             try:
                 Variables.bot_reply(Variables.token, output)
-            except LineBotApiError as error:
-                if "Invalid reply token" in str(error):
-                    if Variables.group_id is None:
-                        Variables.bot.push_message(Variables.user_id, output)
-                    else:
-                        Variables.bot.push_message(Variables.group_id, output)
+            except LineBotApiError:
+                pass
     else:
         if Variables.isgroup and Variables.database.anti_spam(Variables.text, Variables.text) and check is None:
             return
@@ -237,15 +228,6 @@ def handle_message(event):
                     hour, minute = divmod(total, 60)
                     day, hour = divmod(hour, 24)
                     reply('總共需要：{}天{}小時{}分鐘'.format(day, hour, minute))
-    else:
-        string = sub(r'\d', '', Variables.text)
-        words = extract_tags(string)
-        Variables.count += 1
-        with open("text.txt", "a") as f:
-            print(",".join(words), file=f)
-        if Variables.count > 50:
-            Variables.database.save_chat_log()
-            Variables.count = 0
 
 
 if __name__ == '__main__':

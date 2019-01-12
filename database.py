@@ -306,9 +306,3 @@ class Database(object):
             對應的UID列表
         """
         return self.db.permission.find_one({"_id": 0})[key]
-
-    def save_chat_log(self):
-        with open('text.txt', 'r') as f:
-            self.db['log'].insert_one({'text': f.read()})
-        with open('text.txt', 'w') as f:
-            pass
