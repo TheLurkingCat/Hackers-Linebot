@@ -19,6 +19,7 @@ bot = LineBotApi(environ['ChannelAccessToken'])
 bot_reply = bot.reply_message
 handler = WebhookHandler(environ['ChannelSecret'])
 no_check = Database().permission('no_check')
+is_offline = False
 
 user_guide = TemplateSendMessage(
     alt_text='''電腦版無法顯示按紐，按鈕功能只是舉例，實際使用上請自行替換
@@ -54,10 +55,10 @@ def reply(output, event):
     """回覆使用者，但是會先檢查"""
     # 如果在群組內發言而且沒有免檢查特權就檢查他
     check = 'nocheck' if event.source.user_id in no_check else None
-
+    need_check = Database().permission('check')
     if not isinstance(output, SendMessage):
         if output:
-            if event.source.type == 'group' and Database().anti_spam(event.message.text, output) and check is None:
+            if event.source.type == 'group' and event.source.group_id in need_check and Database().anti_spam(event.message.text, output) and check is None:
                 return
             output = TextSendMessage(output)
             try:
@@ -65,7 +66,7 @@ def reply(output, event):
             except LineBotApiError:
                 pass
     else:
-        if event.source.type == 'group' and Database().anti_spam(event.message.text, event.message.text) and check is None:
+        if event.source.type == 'group' and event.source.group_id in need_check and Database().anti_spam(event.message.text, event.message.text) and check is None:
             return
         bot_reply(event.reply_token, output)
 
@@ -92,20 +93,16 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     """主控制器，沒什麼功能，類似一個switch去呼叫其他功能"""
-
+    global is_offline
     database = Database()
     net = Net()
     owners = database.permission('owners')
     admins = database.permission('admins')
-    need_check = database.permission('check')
-
-    state = False
     user_id = event.source.user_id
-
     source = event.source.type
     text = event.message.text
     token = event.reply_token
-    is_offline = False
+
     easy_switch = {'貓 群規': database.get_rules(
     ), "貓 執法者": database.get_rules(-1), "貓 使用說明": user_guide}
 
@@ -155,7 +152,6 @@ def handle_message(event):
     if text_msg[0] == '貓':
         if is_offline:
             return
-        isgroup = True if source == "group" and group_id in need_check else False
         if len(text_msg) > 1:
             quest_1 = database.correct(text_msg[1])
         msg_length = len(text_msg)
@@ -176,7 +172,6 @@ def handle_message(event):
                     reply(database.get_rules(int(text_msg[2])), event)
                 except ValueError as error:
                     print(error)
-                    pass
             elif database.is_wiki_page(quest_1):
                 reply(net.get_data(quest_1, int(text_msg[2])), event)
 
