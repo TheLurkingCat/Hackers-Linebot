@@ -111,7 +111,7 @@ def process_single_line(commands: list) -> str:
     except ValueError as error:
         print(error)
     else:
-        return database.item_data[name][level]['data_string']
+        return database.item_data[name]['data'][level]['data_string']
     return ''
 
 
