@@ -1,308 +1,269 @@
 """
 處理資料庫相關操作的模組
 """
-import re
-from datetime import datetime, timedelta
-from json import dumps
+from asyncio import gather, get_event_loop
+from hashlib import sha3_256
 from os import environ
 from time import time
+from urllib.parse import quote
 
+from google.oauth2.service_account import Credentials
 from linebot.models.send_messages import ImageSendMessage
-from pandas import DataFrame, concat
+from pandas import read_html
 from pygsheets import authorize
 from pymongo import MongoClient
+from requests import get
 
 from pyxdameraulevenshtein import normalized_damerau_levenshtein_distance
 
 
-def is_similar(source, target, threshold):
+def is_similar(source: str, target: str, threshold: float) -> bool:
     """
     使用現成模組，來源
     https://github.com/gfairchild/pyxDamerauLevenshtein
-
-    參數:
+    Args:
         source: 使用者的查詢字串
         target: 資料庫的字串
         threshold: 一個介於0到1之間的值，表示可以容許兩個字串相異程度的最大值
-    回傳:
-        當source 和 target 相異度是否小於 threshold
-
     """
     distance = normalized_damerau_levenshtein_distance(source, target)
     return distance < threshold
 
 
-class Database(object):
-    """處理資料庫相關請求
+def generate_url(title: str) -> str:
+    """生成正確網址
 
+    參數:
+        title: 頁面名稱
+    回傳:
+        正確的連結
+    """
+    url = 'http://hackersthegame.wikia.com/wiki/{}{}'.format(
+        quote(title, safe=''), '%28TC%29' if title in {"幻影", "核心", "入侵", "入侵策略"} else '')
+
+    if get(url).status_code == 200:
+        return url
+    return ""
+
+
+def get_data(name: str, level: int, max_level: int) -> str:
+    """從維基頁面爬取資料
+
+    參數:
+        name: 程式或節點名稱
+        level: 欲查詢的等級
+    回傳:
+        爬到的資料
+    """
+    reply_msg = []
+
+    for dataframe in read_html(generate_url(name)):
+        if (max_level < dataframe.shape[0] < max_level + 3 and
+                dataframe.iloc[level, 0].isdigit() and
+                level == int(dataframe.iloc[level, 0])):
+
+            reply_msg.append(zip(*dataframe.iloc[[0, level], 1:].values))
+
+    return '\n'.join('：'.join(pair) for data in reply_msg for pair in data)
+
+
+class Database:
+    """處理資料庫相關請求
     屬性:
         UserID: MongoDB的使用者名稱
         UserPassword: MongoDB的使用者密碼
-        url: 連接MongoDB的網址
-        db: 主資料庫
-        collection: 預設是查詢名字
-        data_table: 一個用來決定是查時間還是經驗的元組
+        client: 主資料庫
         threshold: 同樣查詢結果的冷卻時間，單位是秒
         pattern: 用來過濾惡意請求的正則表達式
     """
 
-    def __init__(self, UserID=None, UserPassword=None):
-        """初始化MongoDB的連線"""
-        if UserID is None:
-            UserID = environ['UserID']
-            UserPassword = environ['UserPassword']
-        self.url = "mongodb+srv://{}:{}@meow-jzx99.mongodb.net/meow?retryWrites=true".format(
-            UserID, UserPassword)
-        self.db = MongoClient(self.url).meow
-        self.collection = self.db['name']
-        experience = self.db.time.find_one({'_id': 1})
-        self.data_table = (self.db.time.find_one({'_id': 0}), experience)
-        self.threshold = 18000
-        self.pattern = re.compile(r'(.*){(.*)[$](.*)}(.*)')
-
-    def get_username(self, name):
-        """查詢此名字是否已被紀錄
-
-        參數:
-            name: 欲搜尋的名字
-        回傳:
-            多行的可能匹配名字.
-        錯誤:
-            ValueError: 當查詢字串包含{$}時觸發
+    def __init__(self, user_id=None, user_password=None):
+        """初始化MongoDB的連線
+        Args:
+            user_id: MongoDB帳號
+            user_password: MongoDB密碼
         """
-        if self.pattern.findall(name):
-            raise ValueError('嚴重的輸入錯誤，請聯繫作者或管理員')
-        names = []
+        if user_id is None:
+            user_id = environ['UserID']
+        if user_password is None:
+            user_password = environ['UserPassword']
+        url = "mongodb+srv://{}:{}@meow-jzx99.mongodb.net/meow?retryWrites=true".format(
+            user_id, user_password)
+        self.client = MongoClient(url)['meow']
+        self.threshold = 3600  # 1小時
+        self.cache()
 
-        for documents in self.collection.find():
-            if documents['linename'] == name:
-                names.append(documents['gamename'])
-            elif documents['gamename'] == name:
-                names.append(documents['linename'])
-            else:
-                if is_similar(name, documents['linename'], 0.5):
-                    names.append('{}--->{}'.format(documents['linename'],
-                                                   documents['gamename']))
+    def cache(self) -> None:
+        """從資料庫更新資料"""
+        self.item_data = self.client['item_info'].find_one(
+            {'_id': 0}, {'_id': False})
+        self.group_data = self.client['group_info'].find_one(
+            {'_id': 0}, {'_id': False})
 
-                if is_similar(name, documents['gamename'], 0.5):
-                    names.append('{}--->{}'.format(documents['gamename'],
-                                                   documents['linename']))
+    def verify_input(self, name: str, level_from: int, level_to: int) -> None:
+        """檢查輸入是否合法, 一般檢查時 level_from == level_to
+        Args:
+            name: 程式或節點名稱
+            level_from: 原本的等級
+            level_to: 想升到的等級
+        """
+        if name not in self.item_data:
+            raise ValueError('無效的名稱')
+        if level_from > level_to or level_from < 0 or level_to >= len(self.item_data[name]['data']):
+            raise ValueError('無效的等級')
 
-        names = set(names)  # Remove the duplicates.
-        return '\n'.join(names)
-
-    def get_picture(self, name, level, program=False):
+    def get_picture(self, name: str, level: int) -> ImageSendMessage:
         """取得程式或節點的圖片
-
-        參數:
+        Args:
             name: 欲查詢的東西的名稱
             level: 欲查詢的等級
-            program: 因為程式只有一個等級，所以額外處理
-        回傳:
-            一個 ImageSendMessage 物件
-        錯誤:
-            ValueError: 當查詢字串包含{$}時觸發
         """
-        index_name = name + str(level)
-        if self.pattern.findall(index_name):
-            raise ValueError('嚴重的輸入錯誤，請聯繫作者或管理員')
-        collection = self.db.pictures
-        data = collection.find_one({'Name': index_name})
+        if level == 0:
+            raise ValueError('Database::get_picture error!')
+        self.verify_input(name, level, level)
+        data = self.item_data[name][level]
 
-        if data is None and not program:
-            return self.get_picture(name, '', program=True)
+        if data['type'] == 'node':
+            return ImageSendMessage(original_content_url=data["OriginalContentUrl"],
+                                    preview_image_url=data["PreviewImageUrl"])
 
-        if data is None:
-            return '名稱或等級錯誤'
-        else:
-            return ImageSendMessage(
-                original_content_url=data["originalContentUrl"],
-                preview_image_url=data["previewImageUrl"])
+        return ImageSendMessage(original_content_url=data['program_icon']["OriginalContentUrl"],
+                                preview_image_url=data['program_icon']["PreviewImageUrl"])
 
-    def get_rules(self, number=0):
-        """搜尋群規
-
-        參數:
-            number: 第幾條群規，0 代表全部, -1 代表執法者
-        回傳:
-            對應的內容
-        錯誤:
-            ValueError: 當查詢字串包含{$}時觸發
-        """
-        if not isinstance(number, int):
-            raise ValueError('嚴重的輸入錯誤，請聯繫作者或管理員')
-        collection = self.db.rules
-        temp = collection.find_one({'_id': number})
-        if temp is None:
-            return 'Error: Rule not found！'
-        else:
-            return temp['rule']
-
-    def correct(self, word):
+    def correct(self, name: str) -> str:
         """將常見錯誤名稱轉換成正確名稱
-
-        參數:
-            word: 使用者輸入的文字
-        回傳:
-            如果有紀錄，就回傳正確的字，不然就回傳原來的字
+        Args:
+            name: 使用者輸入的文字
         """
-        collection = self.db.correct
-        doc = collection.find_one({'_id': 0})
-        try:
-            return doc[word]
-        except KeyError:
-            return word
+        if name in self.item_data:
+            return name
 
-    def is_wiki_page(self, name):
-        """確認是否為維基頁面
+        for key, value in self.item_data.items():
+            if name in value['nickname']:
+                return key
 
-        參數:
+        raise ValueError("No such word")
+
+    def get_time(self, name: str, level_from: int, level_to: int) -> int:
+        """取得 level_from -> level_to 所需總時間
+        Args:
             name: 程式或節點名稱
-        回傳:
-            此頁面是否存在
+            level_from: 原本的等級
+            level_to: 想升到的等級
         """
-        if name:
-            collection = self.db.wiki
-            document = collection.find_one({'_id': 0})
-            return name in document['pages']
-        return False
-
-    def get_time_exp(self, title, number, level1, level2, search_type, line_now):
-        """取得從level1升級到level2要花多少時間或經驗
-
-        參數:
-            title: 程式或節點的名稱
-            number: 有幾個東西要升級
-            level1: 這東西的當前等級
-            level2: 看你想升到幾級
-            search_type: 0 代表時間 1 代表經驗
-            line_now: 目前在第幾行，記錄錯誤用
-        回傳:
-            要升多久，單位是分鐘
-        錯誤:
-            ValueError: 輸入資料明顯錯誤時觸發
-        """
-        if not self.is_wiki_page(title):
-            raise ValueError('第{}行錯誤: {}找不到！'.format(line_now, title))
-
-        if int(level1) > int(level2):
-            raise ValueError(
-                '第{}行錯誤: 原來的等級{}大於後來的等級{}！'.format(line_now, level1, level2))
-
-        threshold = 10
-
-        if number > threshold:
-            raise ValueError('第{}行錯誤: 數量超過上限，沒有那麼多{}！'.format(line_now, title))
-        try:
-            total = self.data_table[search_type][title][level2]
-            total -= self.data_table[search_type][title][level1]
-        except KeyError:
-            raise ValueError('第{}行錯誤: 資料不正確！'.format(line_now))
-        total *= number
+        self.verify_input(name, level_from, level_to)
+        total = self.item_data[name][level_to]['time']
+        total -= self.item_data[name][level_from]['time']
         return total
 
-    def anti_spam(self, user_input, output):
-        """避免有人惡意洗版
-
-        參數:
-            x: 原本使用者輸入的字串
-            y: 預期輸出字串或代號
-        回傳:
-            是否禁止回覆
+    def get_experience(self, name: str, level_from: int, level_to: int) -> int:
+        """取得 level_from -> level_to 所需總經驗
+        Args:
+            name: 程式或節點名稱
+            level_from: 原本的等級
+            level_to: 想升到的等級
         """
-        time_int = int(time())
-        collection = self.db.banned
-        temp = time_int - self.threshold
-        collection.delete_many({"time": {"$lte": temp}})
-        Taiwan_time = str(datetime.utcnow().replace(
-            microsecond=0) + timedelta(hours=8))
+        self.verify_input(name, level_from, level_to)
+        total = self.item_data[name][level_to]['experience']
+        total -= self.item_data[name][level_from]['experience']
+        return total
+
+    def get_username(self, name: str) -> str:
+        """查詢對應的遊戲ID或Line名字
+        Args:
+            name: 欲查詢的名字
+        """
+        names = [['遊戲ID：'], ['Line名字：'], ['模糊搜尋：']]
+
+        for doc in self.client['name'].find():
+            if doc['linename'] == name:
+                names[0].append(doc['gamename'])
+            elif doc['gamename'] == name:
+                names[1].append(doc['linename'])
+            elif is_similar(name, doc['linename'], 0.5) or is_similar(name, doc['gamename'], 0.5):
+                names[2].append('{}: {}'.format(
+                    doc['linename'], doc['gamename']))
+
+        return '\n'.join(item for sublist in names if len(sublist) > 1 for item in sublist)
+
+    def get_rules(self, number=0) -> str:
+        """搜尋群規
+        Args:
+            number: 第幾條群規，0代表全部
+        """
+        if 0 <= number < len(self.group_data['rule']):
+            return self.group_data['rule'][number]
+
+        raise ValueError("編號錯誤")
+
+    def is_banned(self, output: str) -> bool:
+        """避免有人惡意洗版
+        Args:
+            output: 預期輸出字串
+        """
+
+        hashed_output = sha3_256(output.encode()).hexdigest()
+        time_now = int(time())
+        collection = self.client['banned']
+        collection.delete_many({"time": {"$lte": time_now - self.threshold}})
+
         for document in collection.find():
-            if document['output'] == output and is_similar(user_input, document['input'], 0.75):
+            if document['hased_output'] == hashed_output:
                 return True
+
         collection.insert_one(
-            {"time": time_int, "time_string": Taiwan_time, "input": user_input, 'output': output})
+            {"time": time_now, 'hased_output': hashed_output})
         return False
 
-    def unlock(self):
+    def unlock(self) -> None:
         """解鎖全部被鎖定的文字"""
-        collection = self.db.banned
-        collection.drop()
+        self.client['banned'].drop()
 
-    def get_banned_list(self):
-        """取得目前被封鎖的所有內容
+    def get_names(self):
+        """從Google試算表抓遊戲ID和Line名字"""
+        scope = ('https://www.googleapis.com/auth/spreadsheets',
+                 'https://www.googleapis.com/auth/drive')
+        credentials = Credentials.from_service_account_info(
+            self.group_data['authkey'], scopes=scope)
 
-        回傳:
-            目前被封鎖的所有內容
-        """
-        time_int = int(time())
-        temp = time_int - self.threshold
-        collection = self.db.banned
-        collection.delete_many({"time": {"$lte": temp}})
-        output = []
-        for documents in collection.find():
-            output.append('{} 於 {} 鎖定'.format(
-                documents['input'][2:], documents['time_string']))
-        return '\n'.join(output)
-
-    def add_common_name(self, common_name, real_name):
-        """新增常見錯誤字詞
-
-        參數:
-            common_name: 常輸錯的字串
-            real_name: 正確字串
-        """
-        collection = self.db.correct
-        doc = collection.find_one({'_id': 0})
-        if common_name not in doc:
-            collection.update_one(
-                {'_id': 0}, {'$set': {common_name: real_name}})
-
-    def update_name(self):
-        """一次更新全部使用者遊戲和line名字
-
-        回傳:
-            目前資料數
-        """
-
-        auth = self.db.Authkey.find_one({"_id": 0})
-
-        # 避免密鑰一起被記錄，所以放在遠端，需要時生成
-        with open('client_secret.json', 'w') as secret:
-            secret.write(dumps(auth))
-
-        update_query = []
-
-        google_client = authorize(service_file=r'client_secret.json')
+        google_client = authorize(custom_credentials=credentials)
 
         sheet = google_client.open_by_url(
             'https://docs.google.com/spreadsheets/d/1K8TjqjurniPnQoB8Zmca8EujmKRhNDMOHDaX7QggRV8')
 
         worksheet = sheet.worksheet_by_title('name to ppl')
+        gamename = worksheet.get_col(3, include_tailing_empty=False)[3:]
+        linename = worksheet.get_col(5, include_tailing_empty=False)[3:]
+        return zip(gamename, linename)
 
-        dataframe = DataFrame(list(worksheet))
-        dataframe = concat([dataframe[2], dataframe[4]], axis=1)
-        dataframe.columns = ['gamename', 'linename']
-        dataframe['gamename'] = dataframe['gamename'].astype('str')
-        dataframe['linename'] = dataframe['linename'].astype('str')
-        dataframe = dataframe.loc[3:, :].iterrows()
-
-        for _, data in dataframe:
-            temp = data.to_dict()
-            if temp['gamename'] or temp['linename']:
-                update_query.append(temp)
-            else:
-                break
+    def update_name(self) -> int:
+        """一次更新全部使用者遊戲和line名字"""
+        update_query = []
+        for gamename, linename in self.get_names():
+            update_query.append({'gamename': gamename, 'linename': linename})
         update_query.append({'gamename': 'Meow', 'linename': '小貓貓'})
-        self.collection.drop()
-        result = self.collection.insert_many(update_query)
+        self.client['name'].drop()
+        result = self.client['name'].insert_many(update_query, ordered=False)
         return len(result.inserted_ids) - 1
 
-    def permission(self, key):
-        """取得不同管理等級的UID名單
+    def get_item_data(self):
+        """更新等級資訊"""
+        loop = get_event_loop()
+        final = self.item_data.copy()
 
-        參數:
-            key: 管理等級
-        回傳:
-            對應的UID列表
-        """
-        return self.db.permission.find_one({"_id": 0})[key]
+        async def get_datadata(_name, _level, _max):
+            return await loop.run_in_executor(None, get_data, _name, _level, _max)
+
+        for name in final:
+            final[name]['data'][0]['data_string'] = None
+            tasks = []
+            for i in range(1, len(final[name]['data'])):
+                task = loop.create_task(get_datadata(
+                    name, i, len(final[name]['data']) - 1))
+                tasks.append(task)
+            result = loop.run_until_complete(gather(*tasks))
+            for i in range(1, len(final[name]['data'])):
+                final[name]['data'][i]['data_string'] = result[i - 1]
+
+        self.client['item_info'].drop()
+        self.client['item_info'].insert_one(final)
