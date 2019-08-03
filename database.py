@@ -121,11 +121,11 @@ class Database:
         if level == 0:
             raise ValueError('Database::get_picture error!')
         self.verify_input(name, level, level)
-        data = self.item_data[name][level]
+        data = self.item_data[name]
 
         if data['type'] == 'node':
-            return ImageSendMessage(original_content_url=data["OriginalContentUrl"],
-                                    preview_image_url=data["PreviewImageUrl"])
+            return ImageSendMessage(original_content_url=data['data'][level]["OriginalContentUrl"],
+                                    preview_image_url=data['data'][level]["PreviewImageUrl"])
 
         return ImageSendMessage(original_content_url=data['program_icon']["OriginalContentUrl"],
                                 preview_image_url=data['program_icon']["PreviewImageUrl"])
