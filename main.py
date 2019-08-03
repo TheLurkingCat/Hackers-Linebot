@@ -176,7 +176,7 @@ def handle_message(event):
                     else:
                         reply(picture, event)
 
-            reply(database.get_username(event.message.text[1:]), event)
+            reply(database.get_username(event.message.text[2:]), event)
         elif split_text[0][1] == '計算時間':
             total = process_multiple_line(split_text[1:], database.get_time)
             hour, minute = divmod(total, 60)
