@@ -146,11 +146,12 @@ def process_multiple_line(commands: list, function) -> int:
             continue
 
         try:
-            total_value += function(name, level_from, level_to)
+            temp = function(name, level_from, level_to)
         except ValueError:
             continue
         else:
-            total_value *= number
+            temp *= number
+            total_value += temp
     return total_value
 
 
@@ -182,8 +183,9 @@ def handle_message(event):
                 if (split_text[0][3] == '圖片' and
                         (event.source.type == "user" or event.source.user_id in admins)):
                     try:
+                        name = database.correct(split_text[0][1])
                         picture = database.get_picture(
-                            split_text[0][1], int(split_text[0][2]))
+                            name, int(split_text[0][2]))
                     except ValueError:
                         pass
                     else:
