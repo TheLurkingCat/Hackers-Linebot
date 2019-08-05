@@ -118,12 +118,13 @@ class Database:
             name: 欲查詢的東西的名稱
             level: 欲查詢的等級
         """
-        if level == 0:
-            raise ValueError('Database::get_picture error!')
+
         self.verify_input(name, level, level)
         data = self.item_data[name]
 
         if data['type'] == 'node':
+            if level == 0:
+                raise ValueError('Database::get_picture error!')
             return ImageSendMessage(original_content_url=data['data'][level]["OriginalContentUrl"],
                                     preview_image_url=data['data'][level]["PreviewImageUrl"])
 
@@ -152,8 +153,8 @@ class Database:
             level_to: 想升到的等級
         """
         self.verify_input(name, level_from, level_to)
-        total = self.item_data[name][level_to]['time']
-        total -= self.item_data[name][level_from]['time']
+        total = self.item_data[name]['data'][level_to]['time']
+        total -= self.item_data[name]['data'][level_from]['time']
         return total
 
     def get_experience(self, name: str, level_from: int, level_to: int) -> int:
@@ -164,8 +165,8 @@ class Database:
             level_to: 想升到的等級
         """
         self.verify_input(name, level_from, level_to)
-        total = self.item_data[name][level_to]['experience']
-        total -= self.item_data[name][level_from]['experience']
+        total = self.item_data[name]['data'][level_to]['experience']
+        total -= self.item_data[name]['data'][level_from]['experience']
         return total
 
     def get_username(self, name: str) -> str:

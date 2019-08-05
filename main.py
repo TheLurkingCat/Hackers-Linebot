@@ -65,7 +65,7 @@ def callback():
     return 'OK'
 
 
-def process_single_line(commands: list) -> str:
+def process_single_line(commands: list):
     """單行查詢
     Args:
         commands: 包含查詢內容的列表
@@ -83,7 +83,7 @@ def process_single_line(commands: list) -> str:
                 MessageAction(label='查名字', text='貓 小貓貓'),
                 MessageAction(label='查遊戲內物品資料', text='貓 光炮 21'),
                 MessageAction(label='查一段等級之間經驗',
-                              displayText='貓 計算經驗\n光炮 1 0 21\n守衛 3 20 21')
+                              text='貓 計算經驗\n光炮 1 0 21\n守衛 3 20 21')
             ]
         )
     )
@@ -95,7 +95,12 @@ def process_single_line(commands: list) -> str:
             return database.group_data['admin']
         if commands[0] == '使用說明':
             return user_guide
-        return generate_url(commands[0])
+        try:
+            name = database.correct(commands[0])
+        except ValueError:
+            return ''
+        else:
+            return generate_url(name)
 
     if commands[0] == '群規':
         try:
@@ -104,12 +109,20 @@ def process_single_line(commands: list) -> str:
             print(error)
         return ''
 
+    if commands[1] == '圖片':
+        try:
+            name = database.correct(commands[0])
+        except ValueError:
+            pass
+        if database.item_data[name]['type'] != 'node':
+            return database.get_picture(name, 0)
+
     try:
         name = database.correct(commands[0])
         level = int(commands[1])
         database.verify_input(name, level, level)
     except ValueError as error:
-        print(error)
+        pass
     else:
         return database.item_data[name]['data'][level]['data_string']
     return ''
