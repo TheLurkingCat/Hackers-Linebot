@@ -182,7 +182,7 @@ class Database:
             elif doc['gamename'] == name:
                 names[1].append(doc['linename'])
             elif is_similar(name, doc['linename'], 0.5) or is_similar(name, doc['gamename'], 0.5):
-                names[2].append('{}: {}'.format(
+                names[2].append('{}：{}'.format(
                     doc['linename'], doc['gamename']))
 
         return '\n'.join(item for sublist in names if len(sublist) > 1 for item in sublist)
