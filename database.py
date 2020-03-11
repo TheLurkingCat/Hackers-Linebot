@@ -38,7 +38,7 @@ def generate_url(title: str) -> str:
     回傳:
         正確的連結
     """
-    url = 'http://hackersthegame.wikia.com/wiki/{}{}'.format(
+    url = 'https://hackersthegame.fandom.com/wiki/{}{}'.format(
         quote(title, safe=''), '%28TC%29' if title in {"幻影", "核心", "入侵", "入侵策略"} else '')
 
     if get(url).status_code == 200:
