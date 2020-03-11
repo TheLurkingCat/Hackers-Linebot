@@ -98,9 +98,8 @@ def process_single_line(commands: list):
         try:
             name = database.correct(commands[0])
         except ValueError:
-            return ''
-        else:
-            return generate_url(name)
+            pass
+        return generate_url(name)
 
     if commands[0] == '群規':
         try:
