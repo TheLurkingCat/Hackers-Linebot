@@ -1,0 +1,6 @@
+github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=
+github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
+github.com/line/line-bot-sdk-go/v8 v8.16.0 h1:ZdeTc6fj84Lnnn1OKX/SjFOMzhuullq70vKrpHUrNGk=
+github.com/line/line-bot-sdk-go/v8 v8.16.0/go.mod h1:jjmYNIH9+vxsGpgAY5Ov2dDfvMuamARaohxyr8l3siU=
+github.com/sahilm/fuzzy v0.1.1 h1:ceu5RHF8DGgoi+/dR5PsECjCDH1BE3Fnmpo7aVXOdRA=
+github.com/sahilm/fuzzy v0.1.1/go.mod h1:VFvziUEIMCrT6A6tw2RFIXPXXmzXbOsSHF0DOI8ZK9Y=
