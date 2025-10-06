@@ -107,7 +107,7 @@ func findUser(name string) *messaging_api.TextMessage {
 	}
 
 	for _, match := range fuzzy.Find(name, lineIds) {
-		uniqueResult[fmt.Sprintf("%s --> %s", gameIds[match.Index], match.Str)] = struct{}{}
+		uniqueResult[fmt.Sprintf("%s --> %s", match.Str, gameIds[match.Index])] = struct{}{}
 	}
 
 	temp := slices.Collect(maps.Keys(uniqueResult))
